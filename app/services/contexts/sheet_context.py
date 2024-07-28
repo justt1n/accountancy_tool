@@ -1,0 +1,176 @@
+from googleapiclient.discovery import build
+
+
+
+class SheetContext:
+    def __init__(self, context_manager):
+        google_context = context_manager.get_context("google")
+        creds = google_context.creds
+        self.sheet_service = build('sheets', 'v4', credentials=creds)
+        self.data = None
+
+    def get_data_from_sheet(self, spreadsheet_id: str, range_name: str):
+        result = self.sheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id,
+                                                                range=range_name).execute()
+        self.data = result.get('values', [])
+        return self.data
+
+    def save_data_to_sheet(self, spreadsheet_id: str, range_name: str, data: list):
+        update_request = {
+            "range": range_name,
+            "majorDimension": "ROWS",
+            "values": data
+        }
+
+        batch_update_values_request_body = {
+            "valueInputOption": "RAW",
+            "data": update_request
+        }
+
+        response = self.sheet_service.spreadsheets().values().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body=batch_update_values_request_body
+        ).execute()
+
+        return response
+
+
+    @staticmethod
+    def cell_to_indices(cell: str):
+        col_str = ''.join(filter(str.isalpha, cell))
+        row_str = ''.join(filter(str.isdigit, cell))
+
+        col = sum((ord(char) - ord('A') + 1) * (26 ** i) for i, char in enumerate(reversed(col_str))) - 1
+        row = int(row_str) - 1
+
+        return row, col
+
+    @staticmethod
+    def indices_to_cell(indices):
+        row, col = indices
+        col_str = ""
+        while col >= 0:
+            col_str = chr(col % 26 + ord('A')) + col_str
+            col = col // 26 - 1
+        return f"{col_str}{row + 1}"
+
+    def detect_ranges(self, spreadsheet_id: str, sheet_id: int):
+        # Retrieve the spreadsheet metadata to get the sheet names and grid properties
+        sheet_metadata = self.sheet_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+        sheets = sheet_metadata.get('sheets', [])
+
+        ranges = []
+
+        for sheet in sheets:
+            if sheet.get('properties', {}).get('sheetId') != sheet_id:
+                continue
+
+            grid_props = sheet.get('properties', {}).get('gridProperties', {})
+            max_rows = grid_props.get('rowCount')
+            max_cols = grid_props.get('columnCount')
+
+            # Define a range that covers the entire sheet
+            range_name = f"{sheet.get('properties', {}).get('title')}!A1:{self.indices_to_cell((max_rows - 1, max_cols - 1))}"
+
+            # Retrieve the values within the defined range
+            result = self.sheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id,
+                                                                    range=range_name).execute()
+            values = result.get('values', [])
+
+            # Detect non-empty ranges and their starting cells
+            non_empty_cells = set()
+
+            for r_idx, row in enumerate(values):
+                for c_idx, cell in enumerate(row):
+                    if cell:
+                        non_empty_cells.add((r_idx, c_idx))
+
+            visited = set()
+
+            def find_range(r, c):
+                if (r, c) in non_empty_cells and (r, c) not in visited:
+                    min_r, max_r = r, r
+                    min_c, max_c = c, c
+                    # Expand vertically
+                    for i in range(r, max_rows):
+                        if (i, c) in non_empty_cells:
+                            max_r = i
+                        else:
+                            break
+                    # Expand horizontally
+                    for j in range(c, max_cols):
+                        if (r, j) in non_empty_cells:
+                            max_c = j
+                        else:
+                            break
+                    # Mark all cells in the range as visited
+                    for i in range(min_r, max_r + 1):
+                        for j in range(min_c, max_c + 1):
+                            visited.add((i, j))
+                    return (min_r, min_c, max_r, max_c)
+                return None
+
+            for r_idx in range(max_rows):
+                for c_idx in range(max_cols):
+                    range_coords = find_range(r_idx, c_idx)
+                    if range_coords:
+                        min_r, min_c, max_r, max_c = range_coords
+                        range_str = f"{self.indices_to_cell((min_r, min_c))}:{self.indices_to_cell((max_r, max_c))}"
+                        ranges.append(range_str)
+
+        return ranges
+
+    def get_non_empty_ranges(self, spreadsheet_id: str, sheet_id: int):
+        # Retrieve the spreadsheet metadata to get the sheet names and grid properties
+        sheet_metadata = self.sheet_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+        sheets = sheet_metadata.get('sheets', [])
+
+        starting_cells = []
+
+        for sheet in sheets:
+            if sheet.get('properties', {}).get('sheetId') != sheet_id:
+                continue
+
+            grid_props = sheet.get('properties', {}).get('gridProperties', {})
+            max_rows = grid_props.get('rowCount')
+            max_cols = grid_props.get('columnCount')
+
+            # Define a range that covers the entire sheet
+            range_name = f"{sheet.get('properties', {}).get('title')}!A1:{self.indices_to_cell((max_rows - 1, max_cols - 1))}"
+
+            # Retrieve the values within the defined range
+            result = self.sheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id,
+                                                                    range=range_name).execute()
+            values = result.get('values', [])
+
+            # Detect non-empty ranges and their starting cells
+            non_empty_cells = set()
+
+            for r_idx, row in enumerate(values):
+                for c_idx, cell in enumerate(row):
+                    if cell:
+                        non_empty_cells.add((r_idx, c_idx))
+
+            visited = set()
+
+            def find_range_start(r, c):
+                if (r, c) in non_empty_cells and (r, c) not in visited:
+                    visited.add((r, c))
+                    for i in range(r, max_rows):
+                        for j in range(c, max_cols):
+                            if (i, j) in non_empty_cells:
+                                visited.add((i, j))
+                            else:
+                                break
+                    return self.indices_to_cell((r, c))
+                return None
+
+            for r_idx in range(max_rows):
+                for c_idx in range(max_cols):
+                    start_cell = find_range_start(r_idx, c_idx)
+                    if start_cell:
+                        starting_cells.append(start_cell)
+
+        return starting_cells
+
+
