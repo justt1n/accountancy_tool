@@ -65,12 +65,13 @@ class SheetContext:
             if sheet.get('properties', {}).get('sheetId') != sheet_id:
                 continue
 
+            sheet_title = sheet.get('properties', {}).get('title')
             grid_props = sheet.get('properties', {}).get('gridProperties', {})
             max_rows = grid_props.get('rowCount')
             max_cols = grid_props.get('columnCount')
 
             # Define a range that covers the entire sheet
-            range_name = f"{sheet.get('properties', {}).get('title')}!A1:{self.indices_to_cell((max_rows - 1, max_cols - 1))}"
+            range_name = f"{sheet_title}!A1:{self.indices_to_cell((max_rows - 1, max_cols - 1))}"
 
             # Retrieve the values within the defined range
             result = self.sheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id,
@@ -115,7 +116,7 @@ class SheetContext:
                     range_coords = find_range(r_idx, c_idx)
                     if range_coords:
                         min_r, min_c, max_r, max_c = range_coords
-                        range_str = f"{self.indices_to_cell((min_r, min_c))}:{self.indices_to_cell((max_r, max_c))}"
+                        range_str = f"{sheet_title}!{self.indices_to_cell((min_r, min_c))}:{self.indices_to_cell((max_r, max_c))}"
                         ranges.append(range_str)
 
         return ranges

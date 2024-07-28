@@ -37,5 +37,8 @@ def test2(request: CoreRequest):
 def test3(request: CoreRequest):
     ctx_manager = get_context_manager()
     sheet_context = ctx_manager.get_context("sheet")
-    data = sheet_context.get_data_from_sheet(request.src_sheet_url, RANGE_NAME)
-    return {"status": "OK", "data": data}
+    range_list = sheet_context.detect_ranges(request.src_sheet_url, 0)
+    for range in range_list:
+        sheet_context.get_data_from_sheet(request.src_sheet_url, range)
+        sheet_context.save_data_to_sheet(request.des_sheet_url, range, sheet_context.data)
+    return {"status": "OK"}
