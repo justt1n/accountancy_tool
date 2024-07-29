@@ -333,8 +333,36 @@ class SheetContext:
 
         self.sheet_service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body=body).execute()
 
-
     @staticmethod
     def getRangeFromCell(start_cell, len_of_range):
         for i in range(len_of_range):
             yield f"{start_cell[0]}{int(start_cell[1:]) + i}"
+
+    def clear_range(self, spreadsheet_id, range_name):
+        self.sheet_service.spreadsheets().values().clear(spreadsheetId=spreadsheet_id, range=range_name,
+                                                         body={}).execute()
+
+    def update_range(self, spreadsheet_id, range_name, values):
+        body = {
+            'values': values
+        }
+        self.sheet_service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id, range=range_name,
+            valueInputOption='RAW', body=body).execute()
+
+    def remove_rows_containing_value(self, spreadsheet_id, range_name, value):
+        # Retrieve data from the specified range
+        data = self.get_data_from_sheet(spreadsheet_id, range_name)
+
+        if not data:
+            return
+
+        # Extract header and filter rows
+        header = data[0]
+        filtered_data = [row for row in data if value not in ' '.join(row)]
+
+        # Clear the original range
+        self.clear_range(spreadsheet_id, range_name)
+
+        # Update the range with filtered data
+        self.update_range(spreadsheet_id, range_name, filtered_data)

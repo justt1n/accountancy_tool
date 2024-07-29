@@ -1,4 +1,6 @@
 from app.models.request import CoreRequest
+
+
 class AccountancyService:
     def __init__(self, context_manager, request):
         self.context_manager = context_manager
@@ -11,7 +13,8 @@ class AccountancyService:
         range_list = self.sheet_context.detect_ranges(self.request.src_sheet_url, 0)
         for element in range_list:
             self.sheet_context.get_data_from_sheet(self.request.src_sheet_url, element)
-            header, filter_data = self.sheet_context.filter_data_from_sheet(self.request.src_sheet_url, "Sheet1!A2:H23", "Trạng thái", "chưa trả")
+            header, filter_data = self.sheet_context.filter_data_from_sheet(self.request.src_sheet_url, "Sheet1!A2:H23",
+                                                                            "Trạng thái", "chưa trả")
             header.insert(0, "ID")
             data = [header] + filter_data
             self.sheet_context.save_data_to_sheet(self.request.des_sheet_url, element, data)
@@ -20,13 +23,8 @@ class AccountancyService:
     def acc_process(self):
         range_list = self.sheet_context.detect_ranges(self.request.des_sheet_url, 0)
         for element in range_list:
-            data = self.sheet_context.get_data_from_sheet(self.request.des_sheet_url, element)
-            #check if which row have "trả" then remove from data
-            for row in data[1:]:
-                if "trả" in row:
-                    data.remove(row)
-            self.sheet_context.save_data_to_sheet(self.request.des_sheet_url, element, data)
-        return {"status": "OK", "data": len(data)}
+            self.sheet_context.remove_rows_containing_value(self.request.des_sheet_url, "Sheet1!A2:I23", "trả")
+
 
     def color_to_rgb(self, color_name):
         colors = {
@@ -36,3 +34,13 @@ class AccountancyService:
             # Add more colors as needed
         }
         return colors.get(color_name.lower(), {"red": 0.0, "green": 0.0, "blue": 0.0})
+
+    def remove_rows_containing_value(self, data, value):
+        # Extract header
+        header = data[0]
+
+        # Filter rows that do not contain the specified value
+        filtered_data = [row for row in data[1:] if value not in ' '.join(row)]
+
+        # Return the header and filtered data
+        return [header] + filtered_data
