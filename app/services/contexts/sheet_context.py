@@ -220,7 +220,41 @@ class SheetContext:
 
         for i in range(len(filter_data)):
             filter_data[i].insert(0, matching_cells[i])
-        return header, filter_data, matching_cells
+        return header, filter_data
+
+    def delete_data_from_sheet(self, spreadsheet_id: str, range_name: str, input_header: str, delete_value):
+        delete_value = str(delete_value).strip().lower()
+        # Retrieve the values within the defined range
+        result = self.sheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id,
+                                                                range=range_name).execute()
+        values = result.get('values', [])
+
+        if not values:
+            return []  # Return empty list if no values found
+
+        # Find the index of the column with the specified header
+        header = values[0]
+        try:
+            col_index = header.index(input_header)
+        except ValueError:
+            return []  # Return empty list if the column name is not found
+
+        # Parse the range_name to get the sheet title
+        sheet_title, cell_range = range_name.split('!')
+        cell_range_start = cell_range.split(':')[0]
+
+        # Find the starting row index of the range (assuming standard A1 notation)
+        start_row_idx = int(''.join(filter(str.isdigit, cell_range_start))) - 1
+
+        # Iterate through the rows to find matching values in the specified column
+        count_cell = 0
+        deleted_data = values[1:]
+        for r_idx, row in enumerate(values[1:], start=1):  # Skip header row
+            if len(row) > col_index and str(row[col_index]).strip().lower() == delete_value:
+                count_cell += 1
+                deleted_data.remove(row)
+        deleted_data = [header] + deleted_data
+        return deleted_data
 
     def get_sheet_id(self, spreadsheet_id, sheet_title):
         sheet_metadata = self.sheet_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()

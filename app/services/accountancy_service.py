@@ -11,12 +11,22 @@ class AccountancyService:
         range_list = self.sheet_context.detect_ranges(self.request.src_sheet_url, 0)
         for element in range_list:
             self.sheet_context.get_data_from_sheet(self.request.src_sheet_url, element)
-            header, filter_data, matching_cells = self.sheet_context.filter_data_from_sheet(self.request.src_sheet_url, "Sheet1!A2:H23", "Trạng thái", "chưa trả")
+            header, filter_data = self.sheet_context.filter_data_from_sheet(self.request.src_sheet_url, "Sheet1!A2:H23", "Trạng thái", "chưa trả")
             header.insert(0, "ID")
             data = [header] + filter_data
             self.sheet_context.save_data_to_sheet(self.request.des_sheet_url, element, data)
         return {"status": "OK"}
 
+    def acc_process(self):
+        range_list = self.sheet_context.detect_ranges(self.request.des_sheet_url, 0)
+        for element in range_list:
+            data = self.sheet_context.get_data_from_sheet(self.request.des_sheet_url, element)
+            #check if which row have "trả" then remove from data
+            for row in data[1:]:
+                if "trả" in row:
+                    data.remove(row)
+            self.sheet_context.save_data_to_sheet(self.request.des_sheet_url, element, data)
+        return {"status": "OK", "data": len(data)}
 
     def color_to_rgb(self, color_name):
         colors = {

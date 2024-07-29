@@ -71,3 +71,10 @@ def acc_filter(request: CoreRequest):
     ctx_manager = get_context_manager()
     accountancy_service = AccountancyService(ctx_manager, request)
     return accountancy_service.acc_filter()
+
+
+@router.post("/core/process")
+def acc_filter(request: CoreRequest):
+    ctx_manager = get_context_manager()
+    accountancy_service = AccountancyService(ctx_manager, request)
+    return accountancy_service.acc_process()
