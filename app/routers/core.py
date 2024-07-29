@@ -1,14 +1,13 @@
 # app/routers/core.py
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from app.constants import CONTEXTS
 from app.models.request import CoreRequest
-from app.services.context_manager import ContextManager
 from app.services.accountancy_service import AccountancyService
+from app.services.context_manager import ContextManager
 
 router = APIRouter()
-
 
 _context_manager_instance = None
 
@@ -66,6 +65,7 @@ def test_color(request: CoreRequest):
     start_cell = sheet_context.get_non_empty_ranges_start(request.src_sheet_url, 0)
     return {"status": "OK", "start_cell": start_cell}
 
+
 @router.post("/core/filter")
 def acc_filter(request: CoreRequest):
     ctx_manager = get_context_manager()
@@ -78,3 +78,9 @@ def acc_filter(request: CoreRequest):
     ctx_manager = get_context_manager()
     accountancy_service = AccountancyService(ctx_manager, request)
     return accountancy_service.acc_process()
+
+@router.post("/core/sync")
+def acc_filter(request: CoreRequest):
+    ctx_manager = get_context_manager()
+    accountancy_service = AccountancyService(ctx_manager, request)
+    return accountancy_service.acc_sync()

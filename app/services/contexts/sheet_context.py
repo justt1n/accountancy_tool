@@ -1,5 +1,15 @@
 from googleapiclient.discovery import build
 
+DONE_FILTER_VALUE = [
+    "trả"
+]
+
+FILTER_COLUMN = "Trạng thái"
+
+NOT_DONE_FILTER_VALUE = [
+    "chưa trả"
+]
+
 
 class SheetContext:
     def __init__(self, context_manager):
@@ -41,13 +51,19 @@ class SheetContext:
 
     @staticmethod
     def cell_to_indices(cell: str):
-        col_str = ''.join(filter(str.isalpha, cell))
-        row_str = ''.join(filter(str.isdigit, cell))
-
-        col = sum((ord(char) - ord('A') + 1) * (26 ** i) for i, char in enumerate(reversed(col_str))) - 1
-        row = int(row_str) - 1
-
-        return row, col
+        import re
+        try:
+            match = re.match(r"([A-Za-z]+)([0-9]+)", cell.split('!')[-1])
+            if not match:
+                raise ValueError(f"Invalid cell format: {cell}")
+            col_str, row_str = match.groups()
+            row_index = int(row_str) - 1
+            col_index = sum(
+                (ord(char.upper()) - ord('A') + 1) * (26 ** exp) for exp, char in enumerate(reversed(col_str))) - 1
+            return row_index, col_index
+        except Exception as e:
+            print(f"Error parsing cell '{cell}': {e}")
+            return None
 
     @staticmethod
     def indices_to_cell(indices):
@@ -350,7 +366,7 @@ class SheetContext:
             spreadsheetId=spreadsheet_id, range=range_name,
             valueInputOption='RAW', body=body).execute()
 
-    def remove_rows_containing_value(self, spreadsheet_id, range_name, value):
+    def remove_rows_containing_value(self, spreadsheet_id, range_name, value: str):
         # Retrieve data from the specified range
         data = self.get_data_from_sheet(spreadsheet_id, range_name)
 
@@ -358,11 +374,99 @@ class SheetContext:
             return
 
         # Extract header and filter rows
-        header = data[0]
-        filtered_data = [row for row in data if value not in ' '.join(row)]
+        filtered_data = []
+        filtered_data += [sublist for sublist in data if value not in sublist]
 
         # Clear the original range
         self.clear_range(spreadsheet_id, range_name)
 
         # Update the range with filtered data
         self.update_range(spreadsheet_id, range_name, filtered_data)
+
+    def update_cell(self, spreadsheet_id, cell_range, value):
+        body = {
+            'values': [[value]]
+        }
+        self.sheet_service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id, range=cell_range,
+            valueInputOption='RAW', body=body).execute()
+
+    # def sync_data(self, src_spreadsheet_id, des_spreadsheet_id):
+    #     src_data = self.get_data_from_sheet(src_spreadsheet_id, self.detect_ranges(src_spreadsheet_id, 0)[0])
+    #     des_data = self.get_data_from_sheet(des_spreadsheet_id, self.detect_ranges(des_spreadsheet_id, 0)[0])
+    #     des_filter_data = []
+    #     des_filter_data += [sublist for sublist in des_data if DONE_FILTER_VALUE in sublist]
+    #     sync_col = ["Ví trả", FILTER_COLUMN[0]]
+    #     sync_index = []
+    #     src_header = src_data[0]
+    #     for i in sync_col:
+    #         sync_index.append(src_header.index(i))
+    #     for item in des_filter_data:
+    #         _id = item[0]
+    #         r_index, c_index = self.cell_to_indices(_id)
+    #         sync_cell = self.indices_to_cell((r_index, sync_index[0] - 1))
+    #         self.update_cell(src_spreadsheet_id, _id, DONE_FILTER_VALUE)
+    #         self.update_cell(des_spreadsheet_id, sync_cell, des_data[r_index][sync_index[0]])
+    #
+    #     return {"status": "OK"}
+
+    def sync_data(self, src_spreadsheet_id, des_spreadsheet_id):
+        src_range = self.detect_ranges(src_spreadsheet_id, 0)[0]
+        des_range = self.detect_ranges(des_spreadsheet_id, 0)[0]
+
+        src_data = self.get_data_from_sheet(src_spreadsheet_id, src_range)
+        des_data = self.get_data_from_sheet(des_spreadsheet_id, des_range)
+
+        des_filter_data = [row for row in des_data if DONE_FILTER_VALUE[0] in row]
+
+        sync_col = ["Ví trả", FILTER_COLUMN]
+        src_header = src_data[0]
+
+        sync_index = [src_header.index(col) for col in sync_col]
+
+        updates = []
+
+        for item in des_filter_data:
+            _id = item[0]
+            r_index, c_index = self.cell_to_indices(_id)
+
+            # Check if r_index is within the bounds of des_data
+            if r_index >= len(des_data):
+                print(f"Row index {r_index} out of range for des_data with length {len(des_data)}")
+                continue
+
+            # Check if sync_index[0] is within the bounds of the row
+            if sync_index[0] >= len(des_data[r_index]):
+                print(f"Sync index {sync_index[0]} out of range for row with length {len(des_data[r_index])}")
+                continue
+
+            # Find the corresponding row in the source data based on the ID
+            src_row_index = next((index for index, row in enumerate(src_data) if row[0] == _id), None)
+
+            if src_row_index is None:
+                print(f"No matching ID {_id} found in source data")
+                continue
+
+            sync_cell = self.indices_to_cell((src_row_index, sync_index[0] + 1))
+
+            updates.append({
+                "range": _id,
+                "values": [[DONE_FILTER_VALUE[0]]]
+            })
+            updates.append({
+                "range": sync_cell,
+                "values": [[des_data[r_index][sync_index[0]]]]
+            })
+
+        if updates:
+            self.batch_update_cells(src_spreadsheet_id, updates)
+
+        return {"status": "OK"}
+
+    def batch_update_cells(self, spreadsheet_id, updates):
+        body = {
+            "valueInputOption": "RAW",
+            "data": updates
+        }
+        self.sheet_service.spreadsheets().values().batchUpdate(
+            spreadsheetId=spreadsheet_id, body=body).execute()
