@@ -1,7 +1,6 @@
 from googleapiclient.discovery import build
 
 
-
 class SheetContext:
     def __init__(self, context_manager):
         google_context = context_manager.get_context("google")
@@ -40,7 +39,6 @@ class SheetContext:
 
         return response
 
-
     @staticmethod
     def cell_to_indices(cell: str):
         col_str = ''.join(filter(str.isalpha, cell))
@@ -59,6 +57,13 @@ class SheetContext:
             col_str = chr(col % 26 + ord('A')) + col_str
             col = col // 26 - 1
         return f"{col_str}{row + 1}"
+
+    @staticmethod
+    def col_to_index(col_str):
+        index = 0
+        for char in col_str:
+            index = index * 26 + ord(char.upper()) - ord('A') + 1
+        return index - 1
 
     def detect_ranges(self, spreadsheet_id: str, sheet_id: int):
         # Retrieve the spreadsheet metadata to get the sheet names and grid properties
@@ -127,7 +132,7 @@ class SheetContext:
 
         return ranges
 
-    def get_non_empty_ranges(self, spreadsheet_id: str, sheet_id: int):
+    def get_non_empty_ranges_start(self, spreadsheet_id: str, sheet_id: int):
         # Retrieve the spreadsheet metadata to get the sheet names and grid properties
         sheet_metadata = self.sheet_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
         sheets = sheet_metadata.get('sheets', [])
@@ -215,5 +220,87 @@ class SheetContext:
 
         for i in range(len(filter_data)):
             filter_data[i].insert(0, matching_cells[i])
-        return header, filter_data
+        return header, filter_data, matching_cells
 
+    def get_sheet_id(self, spreadsheet_id, sheet_title):
+        sheet_metadata = self.sheet_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+        sheets = sheet_metadata.get('sheets', [])
+        for sheet in sheets:
+            if sheet.get('properties', {}).get('title') == sheet_title:
+                return sheet.get('properties', {}).get('sheetId')
+        return None
+
+    def fill_color_to_matching_cells(self, spreadsheet_id: str, matching_cells: list, color: dict):
+        requests = []
+        for cell in matching_cells:
+            sheet_title, cell_id = cell.split('!')
+            start_row_idx = int(''.join(filter(str.isdigit, cell_id.split(':')[0]))) - 1
+            start_col_idx = ord(cell_id[0]) - ord('A')
+            end_row_idx = int(
+                ''.join(filter(str.isdigit, cell_id.split(':')[1]))) - 1 if ':' in cell_id else start_row_idx
+            end_col_idx = ord(cell_id.split(':')[-1][0]) - ord('A') if ':' in cell_id else start_col_idx
+
+            requests.append({
+                "repeatCell": {
+                    "range": {
+                        "sheetId": self.get_sheet_id(spreadsheet_id, sheet_title),
+                        "startRowIndex": start_row_idx,
+                        "endRowIndex": end_row_idx + 1,
+                        "startColumnIndex": start_col_idx,
+                        "endColumnIndex": end_col_idx + 1,
+                    },
+                    "cell": {
+                        "userEnteredFormat": {
+                            "backgroundColor": color
+                        }
+                    },
+                    "fields": "userEnteredFormat.backgroundColor"
+                }
+            })
+
+        body = {
+            "requests": requests
+        }
+
+        self.sheet_service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body=body).execute()
+
+    def fill_color_to_matching_range(self, spreadsheet_id: str, start_cells: list, len_of_range: int, color: dict):
+        requests = []
+        for cell in start_cells:
+            range_str = self.getRangeFromCell(cell, len_of_range)
+            sheet_title, cell_range = range_str.split('!')
+            start_cell, end_cell = cell_range.split(':')
+            start_row_idx = int(''.join(filter(str.isdigit, start_cell))) - 1
+            start_col_idx = self.col_to_index(''.join(filter(str.isalpha, start_cell)))
+            end_row_idx = int(''.join(filter(str.isdigit, end_cell))) - 1
+            end_col_idx = self.col_to_index(''.join(filter(str.isalpha, end_cell)))
+
+            requests.append({
+                "repeatCell": {
+                    "range": {
+                        "sheetId": self.get_sheet_id(spreadsheet_id, sheet_title),
+                        "startRowIndex": start_row_idx,
+                        "endRowIndex": end_row_idx + 1,
+                        "startColumnIndex": start_col_idx,
+                        "endColumnIndex": end_col_idx + 1,
+                    },
+                    "cell": {
+                        "userEnteredFormat": {
+                            "backgroundColor": color
+                        }
+                    },
+                    "fields": "userEnteredFormat.backgroundColor"
+                }
+            })
+
+        body = {
+            "requests": requests
+        }
+
+        self.sheet_service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body=body).execute()
+
+
+    @staticmethod
+    def getRangeFromCell(start_cell, len_of_range):
+        for i in range(len_of_range):
+            yield f"{start_cell[0]}{int(start_cell[1:]) + i}"

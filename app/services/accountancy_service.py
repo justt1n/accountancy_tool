@@ -9,11 +9,20 @@ class AccountancyService:
 
     def acc_filter(self):
         range_list = self.sheet_context.detect_ranges(self.request.src_sheet_url, 0)
-        for range in range_list:
-            self.sheet_context.get_data_from_sheet(self.request.src_sheet_url, range)
-            header, filter_data = self.sheet_context.filter_data_from_sheet(self.request.src_sheet_url, "Sheet1!A2:H23", "Trạng thái", "chưa trả")
+        for element in range_list:
+            self.sheet_context.get_data_from_sheet(self.request.src_sheet_url, element)
+            header, filter_data, matching_cells = self.sheet_context.filter_data_from_sheet(self.request.src_sheet_url, "Sheet1!A2:H23", "Trạng thái", "chưa trả")
             header.insert(0, "ID")
             data = [header] + filter_data
-            self.sheet_context.save_data_to_sheet(self.request.des_sheet_url, range, data)
+            self.sheet_context.save_data_to_sheet(self.request.des_sheet_url, element, data)
         return {"status": "OK"}
 
+
+    def color_to_rgb(self, color_name):
+        colors = {
+            "red": {"red": 1.0, "green": 0.0, "blue": 0.0},
+            "green": {"red": 0.0, "green": 1.0, "blue": 0.0},
+            "blue": {"red": 0.0, "green": 0.0, "blue": 1.0},
+            # Add more colors as needed
+        }
+        return colors.get(color_name.lower(), {"red": 0.0, "green": 0.0, "blue": 0.0})

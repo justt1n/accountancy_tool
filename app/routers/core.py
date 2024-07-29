@@ -3,7 +3,6 @@
 from fastapi import APIRouter, HTTPException
 
 from app.constants import CONTEXTS
-from app.models.context_request import ContextRequest
 from app.models.request import CoreRequest
 from app.services.context_manager import ContextManager
 from app.services.accountancy_service import AccountancyService
@@ -59,6 +58,13 @@ def test4(request: CoreRequest):
     data = sheet_context.filter_data_from_sheet(request.src_sheet_url, "Sheet1!A2:H23", "Trạng thái", "  trả")
     return {"status": "OK", "data": data}
 
+
+@router.post("/core/test5")
+def test_color(request: CoreRequest):
+    ctx_manager = get_context_manager()
+    sheet_context = ctx_manager.get_context("sheet")
+    start_cell = sheet_context.get_non_empty_ranges_start(request.src_sheet_url, 0)
+    return {"status": "OK", "start_cell": start_cell}
 
 @router.post("/core/filter")
 def acc_filter(request: CoreRequest):
