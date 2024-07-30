@@ -65,6 +65,20 @@ def test_color(request: CoreRequest):
     start_cell = sheet_context.get_non_empty_ranges_start(request.src_sheet_url, 0)
     return {"status": "OK", "start_cell": start_cell}
 
+@router.post("/core/getAllSheetsFromSpreadsheet")
+def get_all_sheets_from_spreadsheet(request: CoreRequest):
+    ctx_manager = get_context_manager()
+    sheet_context = ctx_manager.get_context("sheet")
+    sheets = sheet_context.get_all_sheets(request.src_sheet_url)
+    return {"status": "OK", "sheets": sheets}
+
+
+@router.post("/core/getSheetData")
+def get_sheet_data(request: CoreRequest):
+    ctx_manager = get_context_manager()
+    sheet_context = ctx_manager.get_context("sheet")
+    data = sheet_context.get_data_from_sheet(request.src_sheet_url, "Sheet2!D10")
+    return {"status": "OK", "data": data}
 
 @router.post("/core/filter")
 def acc_filter(request: CoreRequest):

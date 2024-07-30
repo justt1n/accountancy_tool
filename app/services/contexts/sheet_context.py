@@ -85,6 +85,12 @@ class SheetContext:
                 return sheet.get('properties', {}).get('sheetId')
         return None
 
+    def get_all_sheets(self, spreadsheet_id):
+        sheet_metadata = self.sheet_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+        sheets = sheet_metadata.get('sheets', [])
+        sheet_titles = [sheet.get('properties', {}).get('title', '') for sheet in sheets]
+        return sheet_titles
+
     def save_data_to_sheet(self, spreadsheet_id: str, range_name: str, data: list):
         update_request = {
             "range": range_name,
@@ -397,7 +403,6 @@ class SheetContext:
 
             return _des_sync_data
 
-
         des_sync_data = create_des_sync_data(des_filter_data, des_sync_index)
 
         cell_to_sync = []
@@ -430,4 +435,3 @@ class SheetContext:
             self.batch_update_cells(src_spreadsheet_id, updates)
 
         return {"status": "OK"}
-
