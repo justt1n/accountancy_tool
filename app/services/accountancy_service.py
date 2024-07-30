@@ -19,13 +19,17 @@ class AccountancyService:
 
     def acc_process(self):
         range_list = self.sheet_context.detect_ranges(self.request.des_sheet_url, 0)
-        for element in range_list:
-            self.sheet_context.remove_rows_containing_value(self.request.des_sheet_url, "Sheet1!A2:I23", "trả")
+        for src_range in range_list:
+            des_range = self.sheet_context.detect_ranges(self.request.des_sheet_url, 0)[0]
+            self.sheet_context.sync_data(self.request.src_sheet_url, self.request.des_sheet_url, src_range, des_range)
+            self.sheet_context.remove_rows_containing_value(self.request.des_sheet_url, src_range, "trả")
+        return {"status": "OK"}
 
     def acc_sync(self):
         range_list = self.sheet_context.detect_ranges(self.request.src_sheet_url, 0)
-        for element in range_list:
-            self.sheet_context.sync_data(self.request.src_sheet_url, self.request.des_sheet_url)
+        for src_range in range_list:
+            des_range = self.sheet_context.detect_ranges(self.request.des_sheet_url, 0)[0]
+            self.sheet_context.sync_data(self.request.src_sheet_url, self.request.des_sheet_url, src_range, des_range)
         return {"status": "OK"}
 
     def color_to_rgb(self, color_name):

@@ -20,34 +20,7 @@ class SheetContext:
         self.src_sheet_metadata = None
         self.des_sheet_metadata = None
 
-    def get_sheet_metadata(self, spreadsheet_id: str):
-        sheet_metadata = self.sheet_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
-        return sheet_metadata
-
-    def get_data_from_sheet(self, spreadsheet_id: str, range_name: str):
-        result = self.sheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id,
-                                                                range=range_name).execute()
-        self.data = result.get('values', [])
-        return self.data
-
-    def save_data_to_sheet(self, spreadsheet_id: str, range_name: str, data: list):
-        update_request = {
-            "range": range_name,
-            "majorDimension": "ROWS",
-            "values": data
-        }
-
-        batch_update_values_request_body = {
-            "valueInputOption": "RAW",
-            "data": update_request
-        }
-
-        response = self.sheet_service.spreadsheets().values().batchUpdate(
-            spreadsheetId=spreadsheet_id,
-            body=batch_update_values_request_body
-        ).execute()
-
-        return response
+    ##### UNIT #####
 
     @staticmethod
     def cell_to_indices(cell: str):
@@ -81,6 +54,79 @@ class SheetContext:
             index = index * 26 + ord(char.upper()) - ord('A') + 1
         return index - 1
 
+    @staticmethod
+    def getRangeFromCell(start_cell, len_of_range):
+        for i in range(len_of_range):
+            yield f"{start_cell[0]}{int(start_cell[1:]) + i}"
+
+    def batch_update_cells(self, spreadsheet_id, updates):
+        body = {
+            "valueInputOption": "RAW",
+            "data": updates
+        }
+        self.sheet_service.spreadsheets().values().batchUpdate(
+            spreadsheetId=spreadsheet_id, body=body).execute()
+
+    def get_sheet_metadata(self, spreadsheet_id: str):
+        sheet_metadata = self.sheet_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+        return sheet_metadata
+
+    def get_data_from_sheet(self, spreadsheet_id: str, range_name: str):
+        result = self.sheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id,
+                                                                range=range_name).execute()
+        self.data = result.get('values', [])
+        return self.data
+
+    def get_sheet_id(self, spreadsheet_id, sheet_title):
+        sheet_metadata = self.sheet_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+        sheets = sheet_metadata.get('sheets', [])
+        for sheet in sheets:
+            if sheet.get('properties', {}).get('title') == sheet_title:
+                return sheet.get('properties', {}).get('sheetId')
+        return None
+
+    def save_data_to_sheet(self, spreadsheet_id: str, range_name: str, data: list):
+        update_request = {
+            "range": range_name,
+            "majorDimension": "ROWS",
+            "values": data
+        }
+
+        batch_update_values_request_body = {
+            "valueInputOption": "RAW",
+            "data": update_request
+        }
+
+        response = self.sheet_service.spreadsheets().values().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body=batch_update_values_request_body
+        ).execute()
+
+        return response
+
+    def clear_range(self, spreadsheet_id, range_name):
+        self.sheet_service.spreadsheets().values().clear(spreadsheetId=spreadsheet_id, range=range_name,
+                                                         body={}).execute()
+
+    def update_range(self, spreadsheet_id, range_name, values):
+        body = {
+            'values': values
+        }
+        self.sheet_service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id, range=range_name,
+            valueInputOption='RAW', body=body).execute()
+
+    def update_cell(self, spreadsheet_id, cell_range, value):
+        body = {
+            'values': [[value]]
+        }
+        self.sheet_service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id, range=cell_range,
+            valueInputOption='RAW', body=body).execute()
+
+    ##### COMPLEX #####
+
+    # return ranges of none empty data range
     def detect_ranges(self, spreadsheet_id: str, sheet_id: int):
         # Retrieve the spreadsheet metadata to get the sheet names and grid properties
         sheet_metadata = self.sheet_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
@@ -148,6 +194,7 @@ class SheetContext:
 
         return ranges
 
+    # return starting cells of none empty data range
     def get_non_empty_ranges_start(self, spreadsheet_id: str, sheet_id: int):
         # Retrieve the spreadsheet metadata to get the sheet names and grid properties
         sheet_metadata = self.sheet_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
@@ -201,6 +248,7 @@ class SheetContext:
 
         return starting_cells
 
+    # return header and data of filtered data
     def filter_data_from_sheet(self, spreadsheet_id: str, range_name: str, input_header: str, input_value):
         input_value = str(input_value).strip().lower()
         # Retrieve the values within the defined range
@@ -237,48 +285,6 @@ class SheetContext:
         for i in range(len(filter_data)):
             filter_data[i].insert(0, matching_cells[i])
         return header, filter_data
-
-    def delete_data_from_sheet(self, spreadsheet_id: str, range_name: str, input_header: str, delete_value):
-        delete_value = str(delete_value).strip().lower()
-        # Retrieve the values within the defined range
-        result = self.sheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id,
-                                                                range=range_name).execute()
-        values = result.get('values', [])
-
-        if not values:
-            return []  # Return empty list if no values found
-
-        # Find the index of the column with the specified header
-        header = values[0]
-        try:
-            col_index = header.index(input_header)
-        except ValueError:
-            return []  # Return empty list if the column name is not found
-
-        # Parse the range_name to get the sheet title
-        sheet_title, cell_range = range_name.split('!')
-        cell_range_start = cell_range.split(':')[0]
-
-        # Find the starting row index of the range (assuming standard A1 notation)
-        start_row_idx = int(''.join(filter(str.isdigit, cell_range_start))) - 1
-
-        # Iterate through the rows to find matching values in the specified column
-        count_cell = 0
-        deleted_data = values[1:]
-        for r_idx, row in enumerate(values[1:], start=1):  # Skip header row
-            if len(row) > col_index and str(row[col_index]).strip().lower() == delete_value:
-                count_cell += 1
-                deleted_data.remove(row)
-        deleted_data = [header] + deleted_data
-        return deleted_data
-
-    def get_sheet_id(self, spreadsheet_id, sheet_title):
-        sheet_metadata = self.sheet_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
-        sheets = sheet_metadata.get('sheets', [])
-        for sheet in sheets:
-            if sheet.get('properties', {}).get('title') == sheet_title:
-                return sheet.get('properties', {}).get('sheetId')
-        return None
 
     def fill_color_to_matching_cells(self, spreadsheet_id: str, matching_cells: list, color: dict):
         requests = []
@@ -349,23 +355,6 @@ class SheetContext:
 
         self.sheet_service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body=body).execute()
 
-    @staticmethod
-    def getRangeFromCell(start_cell, len_of_range):
-        for i in range(len_of_range):
-            yield f"{start_cell[0]}{int(start_cell[1:]) + i}"
-
-    def clear_range(self, spreadsheet_id, range_name):
-        self.sheet_service.spreadsheets().values().clear(spreadsheetId=spreadsheet_id, range=range_name,
-                                                         body={}).execute()
-
-    def update_range(self, spreadsheet_id, range_name, values):
-        body = {
-            'values': values
-        }
-        self.sheet_service.spreadsheets().values().update(
-            spreadsheetId=spreadsheet_id, range=range_name,
-            valueInputOption='RAW', body=body).execute()
-
     def remove_rows_containing_value(self, spreadsheet_id, range_name, value: str):
         # Retrieve data from the specified range
         data = self.get_data_from_sheet(spreadsheet_id, range_name)
@@ -383,36 +372,7 @@ class SheetContext:
         # Update the range with filtered data
         self.update_range(spreadsheet_id, range_name, filtered_data)
 
-    def update_cell(self, spreadsheet_id, cell_range, value):
-        body = {
-            'values': [[value]]
-        }
-        self.sheet_service.spreadsheets().values().update(
-            spreadsheetId=spreadsheet_id, range=cell_range,
-            valueInputOption='RAW', body=body).execute()
-
-    # def sync_data(self, src_spreadsheet_id, des_spreadsheet_id):
-    #     src_data = self.get_data_from_sheet(src_spreadsheet_id, self.detect_ranges(src_spreadsheet_id, 0)[0])
-    #     des_data = self.get_data_from_sheet(des_spreadsheet_id, self.detect_ranges(des_spreadsheet_id, 0)[0])
-    #     des_filter_data = []
-    #     des_filter_data += [sublist for sublist in des_data if DONE_FILTER_VALUE in sublist]
-    #     sync_col = ["Ví trả", FILTER_COLUMN[0]]
-    #     sync_index = []
-    #     src_header = src_data[0]
-    #     for i in sync_col:
-    #         sync_index.append(src_header.index(i))
-    #     for item in des_filter_data:
-    #         _id = item[0]
-    #         r_index, c_index = self.cell_to_indices(_id)
-    #         sync_cell = self.indices_to_cell((r_index, sync_index[0] - 1))
-    #         self.update_cell(src_spreadsheet_id, _id, DONE_FILTER_VALUE)
-    #         self.update_cell(des_spreadsheet_id, sync_cell, des_data[r_index][sync_index[0]])
-    #
-    #     return {"status": "OK"}
-
-    def sync_data(self, src_spreadsheet_id, des_spreadsheet_id):
-        src_range = self.detect_ranges(src_spreadsheet_id, 0)[0]
-        des_range = self.detect_ranges(des_spreadsheet_id, 0)[0]
+    def sync_data(self, src_spreadsheet_id, des_spreadsheet_id, src_range, des_range):
 
         src_data = self.get_data_from_sheet(src_spreadsheet_id, src_range)
         des_data = self.get_data_from_sheet(des_spreadsheet_id, des_range)
@@ -420,42 +380,50 @@ class SheetContext:
         des_filter_data = [row for row in des_data if DONE_FILTER_VALUE[0] in row]
 
         sync_col = ["Ví trả", FILTER_COLUMN]
-        src_header = src_data[0]
 
-        sync_index = [src_header.index(col) for col in sync_col]
+        src_header = src_data[0]
+        des_header = des_data[0]
+
+        src_sync_index = [src_header.index(col) for col in sync_col]
+
+        des_sync_index = [des_header.index(col) for col in sync_col]
+
+        def create_des_sync_data(des_data, des_sync_index):
+            _des_sync_data = []
+
+            for sublist in des_data:
+                sync_sublist = [sublist[i] for i in des_sync_index]
+                _des_sync_data.append(sync_sublist)
+
+            return _des_sync_data
+
+
+        des_sync_data = create_des_sync_data(des_filter_data, des_sync_index)
+
+        cell_to_sync = []
+        for sublist in des_filter_data:
+            tmp_cell_to_sync = sublist[0]
+            tmp_r, tmp_c = self.cell_to_indices(tmp_cell_to_sync)
+            for i in src_sync_index:
+                cell_to_sync.append(self.indices_to_cell((tmp_r, i)))
+
+        def map_cells_to_data(des_sync_data, cell_to_sync):
+            # Flatten des_sync_data
+            flat_des_sync_data = [item for sublist in des_sync_data for item in sublist]
+
+            # Create a dictionary to map each cell to its corresponding data
+            _cell_data_map = dict(zip(cell_to_sync, flat_des_sync_data))
+
+            return _cell_data_map
+
+        cell_data_map = map_cells_to_data(des_sync_data, cell_to_sync)
 
         updates = []
 
-        for item in des_filter_data:
-            _id = item[0]
-            r_index, c_index = self.cell_to_indices(_id)
-
-            # Check if r_index is within the bounds of des_data
-            if r_index >= len(des_data):
-                print(f"Row index {r_index} out of range for des_data with length {len(des_data)}")
-                continue
-
-            # Check if sync_index[0] is within the bounds of the row
-            if sync_index[0] >= len(des_data[r_index]):
-                print(f"Sync index {sync_index[0]} out of range for row with length {len(des_data[r_index])}")
-                continue
-
-            # Find the corresponding row in the source data based on the ID
-            src_row_index = next((index for index, row in enumerate(src_data) if row[0] == _id), None)
-
-            if src_row_index is None:
-                print(f"No matching ID {_id} found in source data")
-                continue
-
-            sync_cell = self.indices_to_cell((src_row_index, sync_index[0] + 1))
-
+        for cell, value in cell_data_map.items():
             updates.append({
-                "range": _id,
-                "values": [[DONE_FILTER_VALUE[0]]]
-            })
-            updates.append({
-                "range": sync_cell,
-                "values": [[des_data[r_index][sync_index[0]]]]
+                "range": cell,
+                "values": [[value]]
             })
 
         if updates:
@@ -463,10 +431,3 @@ class SheetContext:
 
         return {"status": "OK"}
 
-    def batch_update_cells(self, spreadsheet_id, updates):
-        body = {
-            "valueInputOption": "RAW",
-            "data": updates
-        }
-        self.sheet_service.spreadsheets().values().batchUpdate(
-            spreadsheetId=spreadsheet_id, body=body).execute()
