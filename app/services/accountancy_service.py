@@ -58,7 +58,7 @@ class AccountancyService:
 
     def acc_filter_multisheet(self, request: AccMultiFilterRequest):
         # sheets = self.sheet_context.get_all_sheets(request.src_sheet_url)
-        sheets = request.src_sheet_name
+        sheets = request.src_sheet_names
         sheet_ids = []
         for sheet in sheets:
             sheet_id = self.sheet_context.get_sheet_id(request.src_sheet_url, sheet)
@@ -98,7 +98,7 @@ class AccountancyService:
         return {"status": "OK"}
 
     def acc_process_multisheet(self, request: AccMultiProcessRequest):
-        des_sheet_names = request.des_sheet_name
+        des_sheet_names = request.des_sheet_names
         des_sheet_ids = []
         for sheet in des_sheet_names:
             sheet_id = self.sheet_context.get_sheet_id(request.des_sheet_url, sheet)

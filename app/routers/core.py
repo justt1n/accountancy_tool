@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 
 from app.constants import CONTEXTS
-from app.models.request import CoreRequest, AccMultiFilterRequest, AccMultiProcessRequest
+from app.models.request import CoreRequest, AccMultiFilterRequest, AccMultiProcessRequest, GetSheetNameRequest
 from app.services.accountancy_service import AccountancyService
 from app.services.context_manager import ContextManager
 
@@ -111,3 +111,11 @@ def acc_filter(request: CoreRequest):
     ctx_manager = get_context_manager()
     accountancy_service = AccountancyService(ctx_manager, request)
     return accountancy_service.acc_sync()
+
+
+@router.post("/core/getAllSheetFromSpreadsheet")
+def getAllSheetFromSpreadsheet(request: GetSheetNameRequest):
+    ctx_manager = get_context_manager()
+    sheet_context = ctx_manager.get_context("sheet")
+    sheets = sheet_context.get_all_sheets(request.src_sheet_url)
+    return {"status": "OK", "sheets": sheets}
