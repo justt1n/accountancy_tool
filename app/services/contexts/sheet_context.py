@@ -292,6 +292,28 @@ class SheetContext:
             filter_data[i].insert(0, matching_cells[i])
         return header, filter_data
 
+    def get_unique_values(self, spreadsheet_id: str, range_name: str, col_title: str):
+        # Retrieve the values within the defined range
+        values = self.get_data_from_sheet(spreadsheet_id, range_name)
+
+        if not values:
+            return []  # Return empty list if no values found
+
+        # Find the index of the column with the specified title
+        header = values[0]
+        try:
+            col_index = header.index(col_title)
+        except ValueError:
+            return []  # Return empty list if the column name is not found
+
+        # Collect unique values from the specified column
+        unique_values = set()
+        for row in values[1:]:  # Skip header row
+            if len(row) > col_index:
+                unique_values.add(row[col_index])
+
+        return list(unique_values)
+
     def fill_color_to_matching_cells(self, spreadsheet_id: str, matching_cells: list, color: dict):
         requests = []
         for cell in matching_cells:
@@ -410,7 +432,7 @@ class SheetContext:
             tmp_cell_to_sync = sublist[0]
             tmp_r, tmp_c = self.cell_to_indices(tmp_cell_to_sync)
             for i in src_sync_index:
-                cell_to_sync.append(self.indices_to_cell((tmp_r, i)))
+                cell_to_sync.append(tmp_cell_to_sync.split("!")[0] + "!" +self.indices_to_cell((tmp_r, i)))
 
         def map_cells_to_data(des_sync_data, cell_to_sync):
             # Flatten des_sync_data
