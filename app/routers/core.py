@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 
 from app.constants import CONTEXTS
-from app.models.request import CoreRequest
+from app.models.request import CoreRequest, AccFilterMultiRequest
 from app.services.accountancy_service import AccountancyService
 from app.services.context_manager import ContextManager
 
@@ -80,11 +80,19 @@ def get_sheet_data(request: CoreRequest):
     data = sheet_context.get_data_from_sheet(request.src_sheet_url, "Sheet2!D10")
     return {"status": "OK", "data": data}
 
+
+@router.post("/core/testMultiSheet")
+def acc_filter(request: AccFilterMultiRequest):
+    ctx_manager = get_context_manager()
+    accountancy_service = AccountancyService(ctx_manager, request)
+    return accountancy_service.acc_filter_multisheet(request)
+
+
 @router.post("/core/filter")
 def acc_filter(request: CoreRequest):
     ctx_manager = get_context_manager()
     accountancy_service = AccountancyService(ctx_manager, request)
-    return accountancy_service.acc_filter()
+    return accountancy_service._acc_filter()
 
 
 @router.post("/core/process")

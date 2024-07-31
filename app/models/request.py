@@ -6,5 +6,9 @@ class CoreRequest(BaseModel):
     des_sheet_url: str
 
 
-class AccRequest(BaseModel):
-    pass
+class AccFilterMultiRequest(BaseModel):
+    src_sheet_url: str
+    des_sheet_url: str
+    src_sheet_name: list
+    des_sheet_name: str
+
