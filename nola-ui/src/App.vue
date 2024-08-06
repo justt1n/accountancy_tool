@@ -21,15 +21,15 @@
           <div class="src_scheet w-1/2">
             <div>
               <label
-                  for="srcSheet"
-                  class="input input-bordered flex items-center gap-2"
-              >Source Sheet:
+                for="srcSheet"
+                class="input input-bordered flex items-center gap-2"
+                >Source Sheet:
                 <input
-                    v-model="srcSheet"
-                    id="srcSheet"
-                    type="text"
-                    @input="onSrcSheetInput"
-                    class="grow"
+                  v-model="srcSheet"
+                  id="srcSheet"
+                  type="text"
+                  @input="onSrcSheetInput"
+                  class="grow"
                 />
                 <span class="badge badge-info">Product Url</span>
               </label>
@@ -39,17 +39,17 @@
                 Product Sheet Data
               </h2>
               <label
-                  v-for="(item, index) in srcSheetData"
-                  :key="index"
-                  class="cursor-pointer label w-48"
+                v-for="(item, index) in srcSheetData"
+                :key="index"
+                class="cursor-pointer label w-48"
               >
                 <span class="label-text" :for="'src' + index">{{ item }}</span>
                 <input
-                    type="checkbox"
-                    :id="'src' + index"
-                    v-model="selectedSrcData"
-                    :value="item"
-                    class="checkbox checkbox-success"
+                  type="checkbox"
+                  :id="'src' + index"
+                  v-model="selectedSrcData"
+                  :value="item"
+                  class="checkbox checkbox-success"
                 />
               </label>
             </div>
@@ -58,15 +58,15 @@
           <div class="des_sheet w-1/2">
             <div>
               <label
-                  for="srcSheet"
-                  class="input input-bordered flex items-center gap-2"
-              >Payment Sheet:
+                for="srcSheet"
+                class="input input-bordered flex items-center gap-2"
+                >Payment Sheet:
                 <input
-                    v-model="desSheet"
-                    id="desSheet"
-                    type="text"
-                    @input="onDesSheetInput"
-                    class="grow"
+                  v-model="desSheet"
+                  id="desSheet"
+                  type="text"
+                  @input="onDesSheetInput"
+                  class="grow"
                 />
                 <span class="badge badge-info">Payment Url</span>
               </label>
@@ -76,17 +76,17 @@
                 Payment Sheet Data
               </h2>
               <label
-                  v-for="(item, index) in desSheetData"
-                  :key="index"
-                  class="cursor-pointer label w-48"
+                v-for="(item, index) in desSheetData"
+                :key="index"
+                class="cursor-pointer label w-48"
               >
                 <span class="label-text" :for="'src' + index">{{ item }}</span>
                 <input
-                    type="checkbox"
-                    :id="'src' + index"
-                    v-model="selectedDesData"
-                    :value="item"
-                    class="checkbox checkbox-success"
+                  type="checkbox"
+                  :id="'src' + index"
+                  v-model="selectedDesData"
+                  :value="item"
+                  class="checkbox checkbox-success"
                 />
               </label>
             </div>
@@ -136,10 +136,10 @@ export default {
       var src_spreadsheet_id = event.target.value.split("/")[5];
       try {
         const response = await axios.post(
-            "http://127.0.0.1:8000/api/core/getAllSheetFromSpreadsheet",
-            {
-              src_sheet_url: src_spreadsheet_id,
-            }
+          "http://127.0.0.1:8000/api/v2/test",
+          {
+            src_sheet_url: src_spreadsheet_id,
+          }
         );
         console.log("Response:", response.data);
         this.srcSheetData = response.data.sheets;
@@ -152,10 +152,10 @@ export default {
       var des_spreadsheet_id = event.target.value.split("/")[5];
       try {
         const response = await axios.post(
-            "http://127.0.0.1:8000/api/core/getAllSheetFromSpreadsheet",
-            {
-              src_sheet_url: des_spreadsheet_id,
-            }
+          "http://127.0.0.1:8000/api/v2/test",
+          {
+            src_sheet_url: des_spreadsheet_id,
+          }
         );
         console.log("Response:", response.data);
         this.desSheetData = response.data.sheets;
@@ -175,8 +175,8 @@ export default {
       }
       //check if data not empty
       if (
-          this.selectedSrcData.length == 0 ||
-          this.selectedDesData.length == 0
+        this.selectedSrcData.length == 0 ||
+        this.selectedDesData.length == 0
       ) {
         alert("Please select the data to filter");
         return;
@@ -184,7 +184,7 @@ export default {
       //check if len of desSheetData == 1
       if (this.selectedDesData.length != 1) {
         alert(
-            "Please select only one destination sheet, found: " +
+          "Please select only one destination sheet, found: " +
             this.selectedDesData.length
         );
         return;
@@ -210,7 +210,7 @@ export default {
       //check selectedRanges not empty
       if (this.selectedDesData.length == 0) {
         alert(
-            "Please select only one destination sheet, found: " +
+          "Please select only one destination sheet, found: " +
             this.selectedDesData.length
         );
         return;
@@ -233,8 +233,8 @@ export default {
       console.log("Data to load:", JSON.stringify(data));
       try {
         const response = await axios.post(
-            "http://127.0.0.1:8000/api/core/testMultiSheet",
-            JSON.stringify(data)
+          "http://127.0.0.1:8000/api/core/testMultiSheet",
+          JSON.stringify(data)
         );
         console.log("Response:", response);
       } catch (error) {
@@ -246,8 +246,8 @@ export default {
       var data = this.buildDataToProcess();
       try {
         const response = await axios.post(
-            "http://127.0.0.1:8000/api/core/testMultiSheet2",
-            data
+          "http://127.0.0.1:8000/api/core/testMultiSheet2",
+          data
         );
         console.log("Response:", response);
       } catch (error) {
