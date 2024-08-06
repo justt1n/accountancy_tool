@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import core
+from app.routers import gsp
 import uvicorn
 app = FastAPI()
 
@@ -18,7 +19,7 @@ app.add_middleware(
 )
 
 app.include_router(core.router, prefix="/api", tags=["core"])
-
+app.include_router(gsp.router, prefix="/api/v2", tags=["gsp"])
 
 @app.get("/")
 def read_root():

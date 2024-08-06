@@ -1,0 +1,32 @@
+function onEdit(e) {
+  var sheet = e.source.getActiveSheet();
+  var range = e.range;
+  var value = range.getValue();
+
+  if (sheet.getName() === "PaymentSheetName" && value === "paid") {
+    var row = range.getRow();
+    var lastCol = sheet.getLastColumn();
+    var identifier = sheet.getRange(row, lastCol).getValue();
+    var identifiers = identifier.split('#');
+
+    if (identifiers.length === 3) {
+      var productSpreadsheetId = identifiers[0];
+      var productSheetId = parseInt(identifiers[1]);
+      var productRowIndex = parseInt(identifiers[2]);
+
+      var productSpreadsheet = SpreadsheetApp.openById(productSpreadsheetId);
+      var productSheet = productSpreadsheet.getSheets().filter(function(sheet) {
+        return sheet.getSheetId() === productSheetId;
+      })[0];
+
+      if (productSheet) {
+        // Cập nhật hàng tương ứng trong sheet Product
+        var productRange = productSheet.getRange(productRowIndex + 1, 1, 1, productSheet.getLastColumn());
+        productRange.clearContent();
+
+        // Xóa hàng trong sheet Payment
+        sheet.deleteRow(row);
+      }
+    }
+  }
+}
