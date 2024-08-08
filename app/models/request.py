@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-
+from typing import List, Dict
 
 class CoreRequest(BaseModel):
     src_sheet_url: str
@@ -19,3 +19,10 @@ class AccMultiProcessRequest(BaseModel):
 
 class GetSheetNameRequest(BaseModel):
     src_sheet_url: str
+
+
+class AccMultiFilterRequestV2(BaseModel):
+    src_spreadsheets: Dict[str, List[str]]
+    des_spreadsheet_id: str
+    des_sheet_name: str
+    columns: List[int]

@@ -1,7 +1,8 @@
 from fastapi import APIRouter
 
 from app.constants import CONTEXTS
-from app.models.request import CoreRequest, AccMultiFilterRequest, AccMultiProcessRequest, GetSheetNameRequest
+from app.models.request import CoreRequest, AccMultiFilterRequest, AccMultiProcessRequest, GetSheetNameRequest, \
+    AccMultiFilterRequestV2
 from app.services.accountancy_service import AccountancyService
 from app.services.context_manager import ContextManager
 
@@ -26,7 +27,16 @@ def test(request: CoreRequest):
 
 @router.post("/test2")
 def test2(request: CoreRequest):
+    request_data = AccMultiFilterRequestV2(
+        src_spreadsheets={
+            "spreadsheet_id_1": ["Sheet1", "Sheet2"],
+            "spreadsheet_id_2": ["SheetA", "SheetB"]
+        },
+        des_spreadsheet_id="payment_spreadsheet_id",
+        des_sheet_name="PaymentSheet",
+        columns=[0, 1, 2]
+    )
     ctx_manager = get_context_manager()
     gsp_context = ctx_manager.get_context("gspread")
-    gsp_context.filter_and_transfer_data()
-    return {"status": "OK", "data": data}
+    gsp_context.filter_and_transfer_data(request_data.src_spreadsheets, request_data.des_spreadsheet_id,request_data.des_sheet_name, request_data.columns)
+    return {"status": "OK"}
