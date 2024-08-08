@@ -110,11 +110,11 @@ class GSpreadContext:
 
         col_offset = 0  # Độ lệch cột giữa các dải dữ liệu
 
-        for product_spreadsheet_id, sheet_ids in product_spreadsheets.items():
+        for product_spreadsheet_id, sheet_names in product_spreadsheets.items():
             product_spreadsheet = self.gc.open_by_key(product_spreadsheet_id)
 
-            for sheet_id in sheet_ids:
-                product_sheet = product_spreadsheet.get_worksheet_by_id(sheet_id)
+            for sheet_name in sheet_names:
+                product_sheet = product_spreadsheet.worksheet(sheet_name)
                 values = product_sheet.get_all_values()
 
                 filtered_values = []
@@ -122,7 +122,7 @@ class GSpreadContext:
                     if 'unpaid' in row:
                         filtered_row = [row[col] for col in columns]
                         # Thêm thông tin nhận diện vào một cell cách nhau bởi "#"
-                        identifier = f"{product_spreadsheet_id}#{sheet_id}#{row_idx}"
+                        identifier = f"{product_spreadsheet_id}#{sheet_name}#{row_idx + 1}"  # row_idx + 1 to convert to 1-based indexing
                         filtered_row.append(identifier)
                         filtered_values.append(filtered_row)
 

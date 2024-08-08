@@ -22,3 +22,11 @@ def test(request: CoreRequest):
     gsp_context = ctx_manager.get_context("gspread")
     data = gsp_context.get_all_sheets(request.src_sheet_url)
     return {"status": "OK", "data": data}
+
+
+@router.post("/test2")
+def test2(request: CoreRequest):
+    ctx_manager = get_context_manager()
+    gsp_context = ctx_manager.get_context("gspread")
+    gsp_context.filter_and_transfer_data()
+    return {"status": "OK", "data": data}
