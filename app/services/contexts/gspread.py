@@ -150,18 +150,6 @@ class GSpreadContext:
         payment_spreadsheet = self.gc.open_by_key(payment_spreadsheet_id)
         payment_sheet = payment_spreadsheet.worksheet(payment_sheet_name)
 
-        # Check if onEnterCell script is already added
-        try:
-            script_content = self.script_service.projects().getContent(scriptId=payment_spreadsheet_id).execute()
-            on_enter_cell_script_exists = any(file['name'] == 'onEnterCell' for file in script_content.get('files', []))
-        except Exception as e:
-            on_enter_cell_script_exists = False
-
-        if not on_enter_cell_script_exists:
-            with open('app/storage/onEnterCell.txt', 'r') as file:
-                on_enter_cell_script_content = file.read()
-            self.add_apps_script(payment_spreadsheet_id, on_enter_cell_script_content)
-
         col_offset = 0  # Độ lệch cột giữa các dải dữ liệu
 
         for product_spreadsheet_id, sheet_names in product_spreadsheets.items():
