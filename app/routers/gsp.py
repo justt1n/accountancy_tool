@@ -29,14 +29,14 @@ def test(request: CoreRequest):
 def test2(request: CoreRequest):
     request_data = AccMultiFilterRequestV2(
         src_spreadsheets={
-            "spreadsheet_id_1": ["Sheet1", "Sheet2"],
-            "spreadsheet_id_2": ["SheetA", "SheetB"]
+            "1IBaJugViSUO36_rNCKfOV1V5D-9YPSoD-vp6CN8GfY8": ["Product1", "Product2"]
+            # "spreadsheet_id_2": ["SheetA", "SheetB"]
         },
-        des_spreadsheet_id="payment_spreadsheet_id",
-        des_sheet_name="PaymentSheet",
-        columns=[0, 1, 2]
+        des_spreadsheet_id="1Mz_fwMlT6cS7sNBkoE1AUaGhjLE9f3XYhoAzy9X9dro",
+        des_sheet_name="Payment1",
+        columns=["Thời gian", "Rate", "Người bán", "Số lượng", "Đơn giá", "Sản phẩm", "Ví trả", "Trạng thái", "Note"]
     )
     ctx_manager = get_context_manager()
     gsp_context = ctx_manager.get_context("gspread")
     gsp_context.filter_and_transfer_data(request_data.src_spreadsheets, request_data.des_spreadsheet_id,request_data.des_sheet_name, request_data.columns)
-    return {"status": "OK"}
+    return {"status": "OK", "request count" : gsp_context.get_request_count()}

@@ -1,6 +1,27 @@
 import gspread
 from googleapiclient.discovery import build
 import json
+from functools import wraps
+
+# Decorator to count requests
+request_count = 0
+
+
+def count_requests(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        global request_count
+        request_count += 1
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+# Apply the decorator to gspread methods
+gspread.Client.open_by_key = count_requests(gspread.Client.open_by_key)
+gspread.Worksheet.get_all_values = count_requests(gspread.Worksheet.get_all_values)
+gspread.Worksheet.update = count_requests(gspread.Worksheet.update)
+gspread.Worksheet.format = count_requests(gspread.Worksheet.format)
 
 
 class GSpreadContext:
@@ -16,30 +37,51 @@ class GSpreadContext:
         spreadsheet.share(email, perm_type='user', role='writer')
         return spreadsheet.id
 
+    import json
+
     def add_apps_script(self, spreadsheet_id, script_content):
-        # Tạo một dự án script mới
+        # Create a new Apps Script project associated with the spreadsheet
         script_request = {
             'title': 'Spreadsheet Automation Script',
             'parentId': spreadsheet_id
         }
 
-        script_response = self.drive_service.files().create(body=script_request,
-                                                            fields='id').execute()
+        script_response = self.drive_service.files().create(body=script_request, fields='id').execute()
         script_id = script_response.get('id')
 
-        # Cập nhật nội dung script
-        update_request = {
-            'files': [{
-                'name': 'Code.gs',
-                'type': 'SERVER_JS',
-                'source': script_content
-            }]
+        # Ensure that the manifest (appsscript.json) is correctly formatted and included
+        manifest_content = {
+            "timeZone": "Asia/Ho_Chi_Minh",
+            "dependencies": {},
+            "exceptionLogging": "STACKDRIVER",
+            "runtimeVersion": "V8"
         }
 
-        self.script_service.projects().updateContent(
-            body=update_request,
-            scriptId=script_id
-        ).execute()
+        # Prepare the update request with both the script and manifest files
+        update_request = {
+            'files': [
+                {
+                    'name': 'Code.gs',
+                    'type': 'SERVER_JS',
+                    'source': script_content
+                },
+                {
+                    'name': 'appsscript.json',
+                    'type': 'JSON',
+                    'source': json.dumps(manifest_content)
+                }
+            ]
+        }
+
+        # Update the content of the newly created script project
+        try:
+            self.script_service.projects().updateContent(
+                scriptId=script_id,
+                body=update_request
+            ).execute()
+        except Exception as e:
+            print(f"Failed to update Apps Script content: {e}")
+            raise
 
         return script_id
 
@@ -108,6 +150,18 @@ class GSpreadContext:
         payment_spreadsheet = self.gc.open_by_key(payment_spreadsheet_id)
         payment_sheet = payment_spreadsheet.worksheet(payment_sheet_name)
 
+        # Check if onEnterCell script is already added
+        try:
+            script_content = self.script_service.projects().getContent(scriptId=payment_spreadsheet_id).execute()
+            on_enter_cell_script_exists = any(file['name'] == 'onEnterCell' for file in script_content.get('files', []))
+        except Exception as e:
+            on_enter_cell_script_exists = False
+
+        if not on_enter_cell_script_exists:
+            with open('app/storage/onEnterCell.txt', 'r') as file:
+                on_enter_cell_script_content = file.read()
+            self.add_apps_script(payment_spreadsheet_id, on_enter_cell_script_content)
+
         col_offset = 0  # Độ lệch cột giữa các dải dữ liệu
 
         for product_spreadsheet_id, sheet_names in product_spreadsheets.items():
@@ -116,24 +170,44 @@ class GSpreadContext:
             for sheet_name in sheet_names:
                 product_sheet = product_spreadsheet.worksheet(sheet_name)
                 values = product_sheet.get_all_values()
+                values = [row for row in product_sheet.get_all_values() if any(cell.strip() for cell in row)]
+                if not values:
+                    continue
 
-                filtered_values = []
-                for row_idx, row in enumerate(values):
+                # Retrieve the header row from the product sheet
+                header_row = values[0]
+                col_indices = [header_row.index(col_name) for col_name in columns]
+
+                # Create the new header row for the filtered values
+                new_header_row = [header_row[idx] for idx in col_indices] + ["Identifier"]
+
+                filtered_values = [new_header_row]  # Insert header at the beginning
+                for row_idx, row in enumerate(values[1:], start=1):  # Skip the header row
                     if 'unpaid' in row:
-                        filtered_row = [row[col] for col in columns]
+                        filtered_row = [row[idx] for idx in col_indices]
                         # Thêm thông tin nhận diện vào một cell cách nhau bởi "#"
                         identifier = f"{product_spreadsheet_id}#{sheet_name}#{row_idx + 1}"  # row_idx + 1 to convert to 1-based indexing
                         filtered_row.append(identifier)
                         filtered_values.append(filtered_row)
 
                 if filtered_values:
-                    start_cell = gspread.utils.rowcol_to_a1(1, col_offset + 1)
-                    end_cell = gspread.utils.rowcol_to_a1(len(filtered_values),
-                                                          col_offset + len(columns) + 1)  # +1 cho thông tin nhận diện
+                    start_col = col_offset + 2  # Adjusted offset to 2
+                    end_col = start_col + len(columns) + 1  # +1 cho thông tin nhận diện
+                    if end_col > payment_sheet.col_count:
+                        raise ValueError(
+                            f"End column {end_col} exceeds the sheet's column count {payment_sheet.col_count}")
+
+                    start_cell = gspread.utils.rowcol_to_a1(1, start_col)
+                    end_cell = gspread.utils.rowcol_to_a1(len(filtered_values), end_col)
                     cell_range = f"{start_cell}:{end_cell}"
 
                     payment_sheet.update(cell_range, filtered_values)
                     col_offset += len(columns) + 1 + 2  # Cách nhau theo chiều ngang 2 cell
+
+                    # Set the identifier column to wrap text to clip
+                    identifier_col = start_col + len(columns)
+                    identifier_range = f"{gspread.utils.rowcol_to_a1(1, identifier_col)}:{gspread.utils.rowcol_to_a1(len(filtered_values), identifier_col)}"
+                    payment_sheet.format(identifier_range, {"wrapStrategy": "CLIP"})
 
     def get_all_sheets(self, spreadsheet_id):
         spreadsheet = self.gc.open_by_key(spreadsheet_id)
@@ -144,4 +218,6 @@ class GSpreadContext:
 
         return sheet_titles
 
-
+    def get_request_count(self):
+        global request_count
+        return request_count

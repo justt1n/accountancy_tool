@@ -25,4 +25,4 @@ class AccMultiFilterRequestV2(BaseModel):
     src_spreadsheets: Dict[str, List[str]]
     des_spreadsheet_id: str
     des_sheet_name: str
-    columns: List[int]
+    columns: List[str]
