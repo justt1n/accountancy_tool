@@ -3,6 +3,8 @@ from googleapiclient.discovery import build
 import json
 from functools import wraps
 
+
+
 # Decorator to count requests
 request_count = 0
 
@@ -26,10 +28,27 @@ gspread.Worksheet.format = count_requests(gspread.Worksheet.format)
 
 class GSpreadContext:
     def __init__(self, ctx_manager):
-        google_context = ctx_manager.get_context("google")
-        self.gc = gspread.authorize(google_context.scoped_creds)
-        self.drive_service = build('drive', 'v3', credentials=google_context.scoped_creds)
-        self.script_service = build('script', 'v1', credentials=google_context.scoped_creds)
+        self.google_context = ctx_manager.get_context("google")
+        self.gc = gspread.authorize(self.google_context.scoped_creds)
+        self.drive_service = build('drive', 'v3', credentials=self.google_context.scoped_creds)
+        self.script_service = build('script', 'v1', credentials=self.google_context.scoped_creds)
+
+    @staticmethod
+    def indices_to_cell(indices):
+        row, col = indices
+        col_str = ""
+        while col >= 0:
+            col_str = chr(col % 26 + ord('A')) + col_str
+            col = col // 26 - 1
+        return f"{col_str}{row + 1}"
+
+    @staticmethod
+    def col_to_index(col_str):
+        index = 0
+        for char in col_str:
+            index = index * 26 + ord(char.upper()) - ord('A') + 1
+        return index - 1
+
 
     def create_spreadsheet(self, title, email):
         # Tạo một bảng tính mới
@@ -150,7 +169,7 @@ class GSpreadContext:
         payment_spreadsheet = self.gc.open_by_key(payment_spreadsheet_id)
         payment_sheet = payment_spreadsheet.worksheet(payment_sheet_name)
 
-        col_offset = 0  # Độ lệch cột giữa các dải dữ liệu
+        col_offset = 0  # Column offset between data ranges
 
         for product_spreadsheet_id, sheet_names in product_spreadsheets.items():
             product_spreadsheet = self.gc.open_by_key(product_spreadsheet_id)
@@ -162,40 +181,49 @@ class GSpreadContext:
                 if not values:
                     continue
 
-                # Retrieve the header row from the product sheet
-                header_row = values[0]
+                # Detect the starting row and column (e.g., B2)
+                start_row, start_col = 0, 0
+                for i, row in enumerate(values):
+                    if any(cell.strip() for cell in row):
+                        start_row = i
+                        start_col = next((idx for idx, cell in enumerate(row) if cell.strip()), 0)
+                        break
+
+                # Retrieve the header row
+                header_row = values[start_row]
                 col_indices = [header_row.index(col_name) for col_name in columns]
 
                 # Create the new header row for the filtered values
                 new_header_row = [header_row[idx] for idx in col_indices] + ["Identifier"]
 
                 filtered_values = [new_header_row]  # Insert header at the beginning
-                for row_idx, row in enumerate(values[1:], start=1):  # Skip the header row
+                for row_idx, row in enumerate(values[start_row + 1:], start=start_row + 1):  # Skip the header row
                     if 'unpaid' in row:
                         filtered_row = [row[idx] for idx in col_indices]
-                        # Thêm thông tin nhận diện vào một cell cách nhau bởi "#"
-                        identifier = f"{product_spreadsheet_id}#{sheet_name}#{row_idx + 1}"  # row_idx + 1 to convert to 1-based indexing
+                        # Add identifier information into a cell separated by "#"
+                        identifier = f"{product_spreadsheet_id}#{sheet_name}#{self.indices_to_cell((row_idx + 1, start_col + 1))}"  # Adjust for correct cell reference
                         filtered_row.append(identifier)
                         filtered_values.append(filtered_row)
 
                 if filtered_values:
-                    start_col = col_offset + 2  # Adjusted offset to 2
-                    end_col = start_col + len(columns) + 1  # +1 cho thông tin nhận diện
+                    start_col_offset = col_offset + 2  # Adjusted offset to 2
+                    end_col = start_col_offset + len(columns) + 1  # +1 for the identifier information
                     if end_col > payment_sheet.col_count:
                         raise ValueError(
                             f"End column {end_col} exceeds the sheet's column count {payment_sheet.col_count}")
 
-                    start_cell = gspread.utils.rowcol_to_a1(1, start_col)
+                    start_cell = gspread.utils.rowcol_to_a1(1, start_col_offset)
                     end_cell = gspread.utils.rowcol_to_a1(len(filtered_values), end_col)
                     cell_range = f"{start_cell}:{end_cell}"
 
                     payment_sheet.update(cell_range, filtered_values)
-                    col_offset += len(columns) + 1 + 2  # Cách nhau theo chiều ngang 2 cell
+                    col_offset += len(columns) + 1 + 2  # Horizontal spacing between datasets
 
                     # Set the identifier column to wrap text to clip
-                    identifier_col = start_col + len(columns)
+                    identifier_col = start_col_offset + len(columns)
                     identifier_range = f"{gspread.utils.rowcol_to_a1(1, identifier_col)}:{gspread.utils.rowcol_to_a1(len(filtered_values), identifier_col)}"
                     payment_sheet.format(identifier_range, {"wrapStrategy": "CLIP"})
+
 
     def get_all_sheets(self, spreadsheet_id):
         spreadsheet = self.gc.open_by_key(spreadsheet_id)
