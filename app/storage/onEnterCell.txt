@@ -1,31 +1,71 @@
-function onEdit(e) {
+function onPaymentEdit(e) {
   var sheet = e.source.getActiveSheet();
-  var range = e.range;
-  var value = range.getValue();
+  var editedRange = e.range;
+  var headerRow = 1; // Adjust if header is not in the first row
 
-  if (sheet.getName() === "PaymentSheetName" && value === "paid") {
-    var row = range.getRow();
-    var lastCol = sheet.getLastColumn();
-    var identifier = sheet.getRange(row, lastCol).getValue();
-    var identifiers = identifier.split('#');
+  // Get the header row values
+  var headers = sheet.getRange(headerRow, 1, 1, sheet.getLastColumn()).getValues()[0];
 
-    if (identifiers.length === 3) {
-      var productSpreadsheetId = identifiers[0];
-      var productSheetId = parseInt(identifiers[1]);
-      var productRowIndex = parseInt(identifiers[2]);
+  // Determine the column indices
+  var paymentMethodCol = headers.indexOf('Ví trả') + 1;
+  var statusCol = headers.indexOf('Trạng thái') + 1;
+  var identifierCol = headers.indexOf('Identifier') + 1;
 
-      var productSpreadsheet = SpreadsheetApp.openById(productSpreadsheetId);
-      var productSheet = productSpreadsheet.getSheets().filter(function(sheet) {
-        return sheet.getSheetId() === productSheetId;
-      })[0];
+  // Ensure the necessary columns are present
+  if (paymentMethodCol === 0 || statusCol === 0 || identifierCol === 0) {
+    Logger.log("Required columns are missing.");
+    return;
+  }
 
-      if (productSheet) {
-        // Cập nhật hàng tương ứng trong sheet Product
-        var productRange = productSheet.getRange(productRowIndex + 1, 1, 1, productSheet.getLastColumn());
-        productRange.clearContent();
+  // Iterate through the edited rows
+  var numRows = editedRange.getNumRows();
 
-        // Xóa hàng trong sheet Payment
-        sheet.deleteRow(row);
+  for (var i = 0; i < numRows; i++) {
+    var status = editedRange.getCell(i + 1, statusCol - editedRange.getColumn() + 1).getValue();
+
+    // Trigger action only when status is changed to "paid"
+    if (status.toLowerCase() == 'paid') {
+      var row = editedRange.getRow() + i;
+
+      // Get the Payment Method and Identifier values
+      var paymentMethod = sheet.getRange(row, paymentMethodCol).getValue();
+      var identifier = sheet.getRange(row, identifierCol).getValue();
+
+      // Parse the Identifier to get Spreadsheet ID, Sheet Name, and Cell Address
+      var idComponents = identifier.split("#");
+      if (idComponents.length === 3) {
+        var targetSpreadsheetId = idComponents[0];
+        var targetSheetName = idComponents[1];
+        var targetCell = idComponents[2];
+
+        // Open the target spreadsheet and update the specified cell
+        var targetSpreadsheet = SpreadsheetApp.openById(targetSpreadsheetId);
+        var targetSheet = targetSpreadsheet.getSheetByName(targetSheetName);
+        var targetRange = targetSheet.getRange(targetCell);
+        var subTargetRange = targetSheet.getRange(targetRange.getRow(), targetRange.getColumn() - 1);
+        // Update the cell with the payment method and status
+        targetRange.setValue(`Paid`);
+        subTargetRange.setValue(`${paymentMethod}`);
+        // Find the dynamic data range within the row to delete
+        var startColumn = 1;
+        var endColumn = 1;
+        var lastColumn = sheet.getLastColumn();
+
+        // Identify the data range to remove
+        for (var col = 1; col <= lastColumn; col++) {
+          var value = sheet.getRange(row, col).getValue();
+          if (value === "" && startColumn === endColumn) {
+            startColumn = col + 1;
+          } else if (value === "" && startColumn !== endColumn) {
+            endColumn = col - 1;
+            break;
+          } else if (col === lastColumn) {
+            endColumn = col;
+          }
+        }
+
+        // Clear the identified data range in the row
+        sheet.getRange(row, startColumn, 1, endColumn - startColumn + 1).clearContent();
       }
     }
   }

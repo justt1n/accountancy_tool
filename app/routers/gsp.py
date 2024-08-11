@@ -38,5 +38,5 @@ def test2(request: CoreRequest):
     )
     ctx_manager = get_context_manager()
     gsp_context = ctx_manager.get_context("gspread")
-    gsp_context.filter_and_transfer_data(request_data.src_spreadsheets, request_data.des_spreadsheet_id,request_data.des_sheet_name, request_data.columns)
+    gsp_context.filter_and_transfer_data2(request_data.src_spreadsheets, request_data.des_spreadsheet_id,request_data.des_sheet_name, request_data.columns)
     return {"status": "OK", "request count" : gsp_context.get_request_count()}

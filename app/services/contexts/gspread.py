@@ -165,6 +165,74 @@ class GSpreadContext:
 
         return ranges
 
+    def filter_and_transfer_data2(self, product_spreadsheets, payment_spreadsheet_id, payment_sheet_name, columns):
+        payment_spreadsheet = self.gc.open_by_key(payment_spreadsheet_id)
+        payment_sheet = payment_spreadsheet.worksheet(payment_sheet_name)
+
+        col_offset = 0  # Column offset between data ranges
+
+        for product_spreadsheet_id, sheet_names in product_spreadsheets.items():
+            product_spreadsheet = self.gc.open_by_key(product_spreadsheet_id)
+
+            for sheet_name in sheet_names:
+                product_sheet = product_spreadsheet.worksheet(sheet_name)
+                values = product_sheet.get_all_values()
+                values = [row for row in values if any(cell.strip() for cell in row)]
+                if not values:
+                    continue
+
+                # Detect the starting row and column using detect_ranges
+                detected_ranges = self.detect_ranges(product_spreadsheet_id, product_sheet.id)
+                if not detected_ranges:
+                    continue
+
+                # Get the starting cell of the first (and only) range
+                start_cell, end_cell = detected_ranges[0].split(":")
+                start_cell = start_cell.split("!")[1]
+                start_row, start_col = gspread.utils.a1_to_rowcol(start_cell)
+
+                # Extract header row from the detected start_row
+                header_row = values[0]
+
+                try:
+                    # Ensure all columns exist in the header row
+                    col_indices = [header_row.index(col_name) for col_name in columns]
+                except ValueError as e:
+                    raise ValueError(f"Column '{e.args[0]}' not found in the header row of sheet '{sheet_name}'")
+
+                # Create the new header row for the filtered values
+                new_header_row = [header_row[idx] for idx in col_indices] + ["Identifier"]
+                status_col_index = header_row.index("Trạng thái")
+
+                filtered_values = [new_header_row]  # Insert header at the beginning
+                for row_idx, row in enumerate(values[1:], start=start_row):
+                    row = [item.strip().lower() for item in row]
+                    if 'unpaid' in row:
+                        filtered_row = [row[idx] for idx in col_indices]
+                        # Add identifier information into a cell separated by "#"
+                        identifier = f"{product_spreadsheet_id}#{sheet_name}#{self.indices_to_cell((row_idx, status_col_index))}"  # Adjust for correct cell reference
+                        filtered_row.append(identifier)
+                        filtered_values.append(filtered_row)
+
+                if filtered_values:
+                    start_col_offset = col_offset + 2  # Adjusted offset to 2
+                    end_col = start_col_offset + len(columns) + 1  # +1 for the identifier information
+                    if end_col > payment_sheet.col_count:
+                        raise ValueError(
+                            f"End column {end_col} exceeds the sheet's column count {payment_sheet.col_count}")
+
+                    start_cell = gspread.utils.rowcol_to_a1(1, start_col_offset)
+                    end_cell = gspread.utils.rowcol_to_a1(len(filtered_values), end_col)
+                    cell_range = f"{start_cell}:{end_cell}"
+
+                    payment_sheet.update(cell_range, filtered_values)
+                    col_offset += len(columns) + 1 + 2  # Horizontal spacing between datasets
+
+                    # Set the identifier column to wrap text to clip
+                    identifier_col = start_col_offset + len(columns)
+                    identifier_range = f"{gspread.utils.rowcol_to_a1(1, identifier_col)}:{gspread.utils.rowcol_to_a1(len(filtered_values), identifier_col)}"
+                    payment_sheet.format(identifier_range, {"wrapStrategy": "CLIP"})
+
     def filter_and_transfer_data(self, product_spreadsheets, payment_spreadsheet_id, payment_sheet_name, columns):
         payment_spreadsheet = self.gc.open_by_key(payment_spreadsheet_id)
         payment_sheet = payment_spreadsheet.worksheet(payment_sheet_name)
