@@ -1,72 +1,89 @@
 function onPaymentEdit(e) {
   var sheet = e.source.getActiveSheet();
   var editedRange = e.range;
-  var headerRow = 1; // Adjust if header is not in the first row
+
+  // Get the next two cells relative to the edited cell
+  var rangeInfoCell2 = sheet.getRange(editedRange.getRow(), editedRange.getColumn() + 2).getValue();
+
+  // Extract the header range from the range info (assuming the header range is always the third component)
+  var headerRangeStr = rangeInfoCell2.split('#')[2];
+
+  // Ensure the header range string is valid
+  if (!headerRangeStr) {
+    Logger.log("Header range information is missing or incorrectly formatted.: " + headerRangeStr);
+    return;
+  }
+
+  // Get the header range
+  var headerRange = sheet.getRange(headerRangeStr);
 
   // Get the header row values
-  var headers = sheet.getRange(headerRow, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var headers = headerRange.getValues()[0];
 
-  // Determine the column indices
-  var paymentMethodCol = headers.indexOf('Ví trả') + 1;
-  var statusCol = headers.indexOf('Trạng thái') + 1;
-  var identifierCol = headers.indexOf('Identifier') + 1;
+  // Determine the column indices within the header range
+  var paymentMethodCol = headers.indexOf('Ví trả');
+  var statusCol = headers.indexOf('Trạng thái');
+  var identifierCol = headers.indexOf('Identifier');
 
-  // Ensure the necessary columns are present
-  if (paymentMethodCol === 0 || statusCol === 0 || identifierCol === 0) {
+  // If any column is missing, log and exit
+  if (paymentMethodCol === -1 || statusCol === -1 || identifierCol === -1) {
     Logger.log("Required columns are missing.");
     return;
   }
+
+  // Adjust column indices to match actual sheet columns
+  paymentMethodCol += headerRange.getColumn();
+  statusCol += headerRange.getColumn();
+  identifierCol += headerRange.getColumn();
 
   // Iterate through the edited rows
   var numRows = editedRange.getNumRows();
 
   for (var i = 0; i < numRows; i++) {
-    var status = editedRange.getCell(i + 1, statusCol - editedRange.getColumn() + 1).getValue();
+    // Calculate the relative column index for the status column within the edited range
+    var relativeStatusCol = statusCol - editedRange.getColumn() + 1;
 
-    // Trigger action only when status is changed to "paid"
-    if (status.toLowerCase() == 'paid') {
-      var row = editedRange.getRow() + i;
+    // Check if the relative column index is within the edited range
+    if (relativeStatusCol > 0 && relativeStatusCol <= editedRange.getNumColumns()) {
+      var status = editedRange.getCell(i + 1, relativeStatusCol).getValue();
 
-      // Get the Payment Method and Identifier values
-      var paymentMethod = sheet.getRange(row, paymentMethodCol).getValue();
-      var identifier = sheet.getRange(row, identifierCol).getValue();
+      // Trigger action only when status is changed to "paid"
+      if (status.toLowerCase() === 'paid') {
+        var row = editedRange.getRow() + i;
 
-      // Parse the Identifier to get Spreadsheet ID, Sheet Name, and Cell Address
-      var idComponents = identifier.split("#");
-      if (idComponents.length === 3) {
-        var targetSpreadsheetId = idComponents[0];
-        var targetSheetName = idComponents[1];
-        var targetCell = idComponents[2];
+        // Get the Payment Method, Identifier, and Delete Range values
+        var paymentMethod = sheet.getRange(row, paymentMethodCol).getValue();
+        var identifier = sheet.getRange(row, identifierCol).getValue();
 
-        // Open the target spreadsheet and update the specified cell
-        var targetSpreadsheet = SpreadsheetApp.openById(targetSpreadsheetId);
-        var targetSheet = targetSpreadsheet.getSheetByName(targetSheetName);
-        var targetRange = targetSheet.getRange(targetCell);
-        var subTargetRange = targetSheet.getRange(targetRange.getRow(), targetRange.getColumn() - 1);
-        // Update the cell with the payment method and status
-        targetRange.setValue(`Paid`);
-        subTargetRange.setValue(`${paymentMethod}`);
-        // Find the dynamic data range within the row to delete
-        var startColumn = 1;
-        var endColumn = 1;
-        var lastColumn = sheet.getLastColumn();
+        // Parse the Identifier to get Spreadsheet ID, Sheet Name, Delete Range, and Cell Address
+        var idComponents = identifier.split("#");
+        if (idComponents.length === 4) {
+          var targetSpreadsheetId = idComponents[0];
+          var targetSheetName = idComponents[1];
+          var deleteRange = idComponents[2];
+          var targetCell = idComponents[3];
 
-        // Identify the data range to remove
-        for (var col = 1; col <= lastColumn; col++) {
-          var value = sheet.getRange(row, col).getValue();
-          if (value === "" && startColumn === endColumn) {
-            startColumn = col + 1;
-          } else if (value === "" && startColumn !== endColumn) {
-            endColumn = col - 1;
-            break;
-          } else if (col === lastColumn) {
-            endColumn = col;
-          }
+          // Open the target spreadsheet and update the specified cell
+          var targetSpreadsheet = SpreadsheetApp.openById(targetSpreadsheetId);
+          var targetSheet = targetSpreadsheet.getSheetByName(targetSheetName);
+          var targetRange = targetSheet.getRange(targetCell);
+          var subTargetRange = targetSheet.getRange(targetRange.getRow(), targetRange.getColumn() - 1);
+
+          // Update the cell with the payment method and status
+          targetRange.setValue('Paid');
+          subTargetRange.setValue(paymentMethod);
+
+          // Parse the delete range (e.g., "B1:K1")
+          var deleteRangeColumns = deleteRange.split(":");
+          var startColumn = sheet.getRange(deleteRangeColumns[0]).getColumn();
+          var endColumn = sheet.getRange(deleteRangeColumns[1]).getColumn();
+
+          // Clear the identified data range in the row
+          sheet.getRange(row, startColumn, 1, endColumn - startColumn + 1).clearContent();
         }
-
-        // Clear the identified data range in the row
-        sheet.getRange(row, startColumn, 1, endColumn - startColumn + 1).clearContent();
       }
+    } else {
+      Logger.log("Status column is out of the range of the edited cells.");
     }
   }
 }

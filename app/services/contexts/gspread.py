@@ -209,8 +209,11 @@ class GSpreadContext:
                     row = [item.strip().lower() for item in row]
                     if 'unpaid' in row:
                         filtered_row = [row[idx] for idx in col_indices]
+                        # Calculate begin_col and end_col based on the current col_offset
+                        begin_col = gspread.utils.rowcol_to_a1(1, col_offset + 2)
+                        end_col = gspread.utils.rowcol_to_a1(1, col_offset + 1 + len(columns) + 1)
                         # Add identifier information into a cell separated by "#"
-                        identifier = f"{product_spreadsheet_id}#{sheet_name}#{self.indices_to_cell((row_idx, status_col_index))}"  # Adjust for correct cell reference
+                        identifier = f"{product_spreadsheet_id}#{sheet_name}#{begin_col}:{end_col}#{self.indices_to_cell((row_idx, status_col_index))}"
                         filtered_row.append(identifier)
                         filtered_values.append(filtered_row)
 
