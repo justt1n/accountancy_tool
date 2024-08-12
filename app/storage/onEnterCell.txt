@@ -1,9 +1,19 @@
 function onPaymentEdit(e) {
   var sheet = e.source.getActiveSheet();
   var editedRange = e.range;
+  var rangeInfoCell2;
+  var i = 1;
+  var row = editedRange.getRow();
+  var col = editedRange.getColumn();
+  while(true) {
+    rangeInfoCellHeader = sheet.getRange(1, col + i).getValue();
+    if (rangeInfoCellHeader === "Identifier") {
+        break;
+    }
+    i++;
+  }
 
-  // Get the next two cells relative to the edited cell
-  var rangeInfoCell2 = sheet.getRange(editedRange.getRow(), editedRange.getColumn() + 2).getValue();
+  var rangeInfoCell2 = sheet.getRange(row, col + i).getValue();
 
   // Extract the header range from the range info (assuming the header range is always the third component)
   var headerRangeStr = rangeInfoCell2.split('#')[2];

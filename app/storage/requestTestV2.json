@@ -1,0 +1,21 @@
+{
+  "src_spreadsheets": {
+    "1IBaJugViSUO36_rNCKfOV1V5D-9YPSoD-vp6CN8GfY8": [
+      "Product1",
+      "Product2"
+    ]
+  },
+  "des_spreadsheet_id": "1Mz_fwMlT6cS7sNBkoE1AUaGhjLE9f3XYhoAzy9X9dro",
+  "des_sheet_name": "Payment1",
+  "columns": [
+    "Thời gian",
+    "Rate",
+    "Người bán",
+    "Số lượng",
+    "Đơn giá",
+    "Sản phẩm",
+    "Ví trả",
+    "Trạng thái",
+    "Note"
+  ]
+}

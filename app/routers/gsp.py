@@ -18,7 +18,7 @@ def get_context_manager():
     return _context_manager_instance
 
 @router.post("/test")
-def test(request: CoreRequest):
+def test(request: GetSheetNameRequest):
     ctx_manager = get_context_manager()
     gsp_context = ctx_manager.get_context("gspread")
     data = gsp_context.get_all_sheets(request.src_sheet_url)
@@ -26,16 +26,17 @@ def test(request: CoreRequest):
 
 
 @router.post("/test2")
-def test2(request: CoreRequest):
-    request_data = AccMultiFilterRequestV2(
-        src_spreadsheets={
-            "1IBaJugViSUO36_rNCKfOV1V5D-9YPSoD-vp6CN8GfY8": ["Product1", "Product2"]
-            # "spreadsheet_id_2": ["SheetA", "SheetB"]
-        },
-        des_spreadsheet_id="1Mz_fwMlT6cS7sNBkoE1AUaGhjLE9f3XYhoAzy9X9dro",
-        des_sheet_name="Payment1",
-        columns=["Thời gian", "Rate", "Người bán", "Số lượng", "Đơn giá", "Sản phẩm", "Ví trả", "Trạng thái", "Note"]
-    )
+def test2(request: AccMultiFilterRequestV2):
+    # request_data = AccMultiFilterRequestV2(
+    #     src_spreadsheets={
+    #         "1IBaJugViSUO36_rNCKfOV1V5D-9YPSoD-vp6CN8GfY8": ["Product1", "Product2"]
+    #         # "spreadsheet_id_2": ["SheetA", "SheetB"]
+    #     },
+    #     des_spreadsheet_id="1Mz_fwMlT6cS7sNBkoE1AUaGhjLE9f3XYhoAzy9X9dro",
+    #     des_sheet_name="Payment1",
+    #     columns=["Thời gian", "Rate", "Người bán", "Số lượng", "Đơn giá", "Sản phẩm", "Ví trả", "Trạng thái", "Note"]
+    # )
+    request_data = request
     ctx_manager = get_context_manager()
     gsp_context = ctx_manager.get_context("gspread")
     gsp_context.filter_and_transfer_data2(request_data.src_spreadsheets, request_data.des_spreadsheet_id,request_data.des_sheet_name, request_data.columns)
