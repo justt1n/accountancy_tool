@@ -19,18 +19,23 @@
           @update:selectedData="updateSelectedDestData"
         />
       </div>
+      <ButtonComponent type="submit" variant="primary" @click="processData">
+        Submit
+      </ButtonComponent>
     </div>
   </template>
   
   <script>
   import TitleComponent from "./components/TitleComponent.vue";
   import SheetComponent from "./components/SheetComponent.vue";
+  import ButtonComponent from "./components/ButtonComponent.vue";
   
   export default {
     name: "App",
     components: {
       TitleComponent,
       SheetComponent,
+      ButtonComponent,
     },
     data() {
       return {
@@ -39,7 +44,8 @@
         selectedSrcData: [],
         destSheet: "",
         destSheetData: [],
-        selectedDestData: []
+        selectedDestData: [],
+        selectedSheet: [],
       };
     },
     methods: {
@@ -54,8 +60,15 @@
       },
       updateSelectedDestData(value) {
         this.selectedDestData = value;
-      }
-    }
+      },
+      async processData() {
+        console.log("Processing data...");
+        console.log("Source Sheet:", this.srcSheet);
+        console.log("Selected Source Data:", this.selectedSrcData);
+        console.log("Destination Sheet:", this.destSheet);
+        console.log("Selected Destination Data:", this.selectedDestData);
+      },
+    },
   };
   </script>
   

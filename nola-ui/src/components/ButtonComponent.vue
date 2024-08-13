@@ -1,5 +1,5 @@
 <template>
-    <button
+    <button 
       :class="computedClass"
       :type="type"
       @click="handleClick"
@@ -27,7 +27,7 @@
     },
     computed: {
       computedClass() {
-        const baseClass = 'btn';
+        const baseClass = 'btn btn-success';
         const variantClass = this.variant ? `btn-${this.variant}` : '';
         const disabledClass = this.disabled ? 'btn-disabled' : '';
         return `${baseClass} ${variantClass} ${disabledClass}`;

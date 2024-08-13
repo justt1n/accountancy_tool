@@ -39,7 +39,11 @@
       <h3 class="text-lg font-bold">Sheet Names</h3>
       <ul>
         <li v-for="(sheet, index) in sheetNames" :key="index">
-          <DropdownComponent :sheetName="sheet" :spreadsheetId="srcSpreadsheetId" />
+          <DropdownComponent
+            :sheetName="sheet"
+            :spreadsheetId="srcSpreadsheetId"
+            @update:selectedSheets="handleSelectedSheets"
+          />
         </li>
       </ul>
     </div>
@@ -48,7 +52,7 @@
 
 <script>
 import axios from "axios";
-import DropdownComponent from './DropdownComponent.vue';
+import DropdownComponent from "./DropdownComponent.vue";
 
 export default {
   name: "SheetComponent",
@@ -68,19 +72,25 @@ export default {
       sheetNames: [],
       srcSpreadsheetId: "",
       selectedSheet: [],
+      selectedHeaders: [],
     };
+  },
+  watch: {
+    localSheet(newValue) {
+      this.$emit('update:sheet', newValue);
+    },
+    localSelectedData(newValue) {
+      this.$emit('update:selectedData', newValue);
+    }
   },
   methods: {
     async onSheetInput(event) {
       console.log("Source Sheet input:", event.target.value);
       this.srcSpreadsheetId = event.target.value.split("/")[5]; // Store the ID
       try {
-        const response = await axios.post(
-          "http://127.0.0.1:8000/api/v2/test",
-          {
-            src_sheet_url: this.srcSpreadsheetId,
-          }
-        );
+        const response = await axios.post("http://127.0.0.1:8000/api/v2/test", {
+          src_sheet_url: this.srcSpreadsheetId,
+        });
         console.log("Response:", response.data);
         this.sheetNames = response.data.data;
         console.log("Sheet names:", this.sheetNames);
