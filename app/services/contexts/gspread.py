@@ -305,6 +305,22 @@ class GSpreadContext:
 
         return sheet_titles
 
+    def get_header(self, spreadsheet_id, sheet_name):
+        spreadsheet = self.gc.open_by_key(spreadsheet_id)
+        sheet = spreadsheet.worksheet(sheet_name)
+        values = sheet.get_all_values()
+        values = [row for row in values if any(cell.strip() for cell in row)]
+        start_row, start_col = 0, 0
+        for i, row in enumerate(values):
+            if any(cell.strip() for cell in row):
+                start_row = i
+                start_col = next((idx for idx, cell in enumerate(row) if cell.strip()), 0)
+                break
+
+        header_row = values[start_row]
+        header_row = [col for col in header_row if col]
+        return header_row
+
     def get_request_count(self):
         global request_count
         return request_count

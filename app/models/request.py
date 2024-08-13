@@ -20,6 +20,10 @@ class AccMultiProcessRequest(BaseModel):
 class GetSheetNameRequest(BaseModel):
     src_sheet_url: str
 
+class GetHeaderRequest(BaseModel):
+    src_sheet_url: str
+    src_sheet_name: str
+
 
 class AccMultiFilterRequestV2(BaseModel):
     src_spreadsheets: Dict[str, List[str]]
