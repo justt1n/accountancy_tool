@@ -65,6 +65,7 @@ def test_color(request: CoreRequest):
     start_cell = sheet_context.get_non_empty_ranges_start(request.src_sheet_url, 0)
     return {"status": "OK", "start_cell": start_cell}
 
+
 @router.post("/core/getAllSheetsFromSpreadsheet")
 def get_all_sheets_from_spreadsheet(request: CoreRequest):
     ctx_manager = get_context_manager()
@@ -87,11 +88,13 @@ def acc_filter(request: AccMultiFilterRequest):
     accountancy_service = AccountancyService(ctx_manager, request)
     return accountancy_service.acc_filter_multisheet(request)
 
+
 @router.post("/core/testMultiSheet2")
 def acc_filter(request: AccMultiProcessRequest):
     ctx_manager = get_context_manager()
     accountancy_service = AccountancyService(ctx_manager, request)
     return accountancy_service.acc_process_multisheet(request)
+
 
 @router.post("/core/filter")
 def acc_filter(request: CoreRequest):
@@ -105,6 +108,7 @@ def acc_filter(request: CoreRequest):
     ctx_manager = get_context_manager()
     accountancy_service = AccountancyService(ctx_manager, request)
     return accountancy_service.acc_process()
+
 
 @router.post("/core/sync")
 def acc_filter(request: CoreRequest):

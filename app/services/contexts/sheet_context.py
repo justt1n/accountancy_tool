@@ -432,7 +432,7 @@ class SheetContext:
             tmp_cell_to_sync = sublist[0]
             tmp_r, tmp_c = self.cell_to_indices(tmp_cell_to_sync)
             for i in src_sync_index:
-                cell_to_sync.append(tmp_cell_to_sync.split("!")[0] + "!" +self.indices_to_cell((tmp_r, i)))
+                cell_to_sync.append(tmp_cell_to_sync.split("!")[0] + "!" + self.indices_to_cell((tmp_r, i)))
 
         def map_cells_to_data(des_sync_data, cell_to_sync):
             # Flatten des_sync_data

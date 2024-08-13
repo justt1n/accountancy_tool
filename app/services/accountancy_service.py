@@ -66,7 +66,7 @@ class AccountancyService:
         range_list = []
         for sheet_id in sheet_ids:
             range_data = self.sheet_context.detect_ranges(request.src_sheet_url, sheet_id)
-            #because 1 sheet Product (src_sheet) has just 1 range
+            # because 1 sheet Product (src_sheet) has just 1 range
             range_list.append(range_data[0])
 
         for _range in range_list:
@@ -114,7 +114,6 @@ class AccountancyService:
                 src_sheet_names.append(tmp_sheet_name.split("!")[0])
                 des_sheet_mapping[tmp_sheet_name.split("!")[0]] = _range
 
-
         src_sheet_names = list(set(src_sheet_names))
         src_sheet_ranges = []
         for sheet in src_sheet_names:
@@ -134,6 +133,5 @@ class AccountancyService:
         for key, value in mapped_sheet_mapping.items():
             self.sheet_context.sync_data(request.src_sheet_url, request.des_sheet_url, value[0], value[1])
             self.sheet_context.remove_rows_containing_value(request.des_sheet_url, value[1], "trả")
-
 
         return {"status": "OK", "des_cell": mapped_sheet_mapping}

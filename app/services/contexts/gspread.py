@@ -1,9 +1,8 @@
-import gspread
-from googleapiclient.discovery import build
 import json
 from functools import wraps
 
-
+import gspread
+from googleapiclient.discovery import build
 
 # Decorator to count requests
 request_count = 0
@@ -49,14 +48,11 @@ class GSpreadContext:
             index = index * 26 + ord(char.upper()) - ord('A') + 1
         return index - 1
 
-
     def create_spreadsheet(self, title, email):
         # Tạo một bảng tính mới
         spreadsheet = self.gc.create(title)
         spreadsheet.share(email, perm_type='user', role='writer')
         return spreadsheet.id
-
-    import json
 
     def add_apps_script(self, spreadsheet_id, script_content):
         # Create a new Apps Script project associated with the spreadsheet
@@ -294,7 +290,6 @@ class GSpreadContext:
                     identifier_col = start_col_offset + len(columns)
                     identifier_range = f"{gspread.utils.rowcol_to_a1(1, identifier_col)}:{gspread.utils.rowcol_to_a1(len(filtered_values), identifier_col)}"
                     payment_sheet.format(identifier_range, {"wrapStrategy": "CLIP"})
-
 
     def get_all_sheets(self, spreadsheet_id):
         spreadsheet = self.gc.open_by_key(spreadsheet_id)

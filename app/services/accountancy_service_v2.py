@@ -1,5 +1,3 @@
-from app.models.request import AccMultiFilterRequest, AccMultiProcessRequest
-
 class AccountancyServiceV2:
     def __init__(self, context_manager, request):
         self.context_manager = context_manager
@@ -7,5 +5,3 @@ class AccountancyServiceV2:
         self.request = request
         self.gsp_context.src_sheet_metadata = self.gsp_context.get_sheet_metadata(request.src_sheet_url)
         self.gsp_context.des_sheet_metadata = self.gsp_context.get_sheet_metadata(request.des_sheet_url)
-
-
