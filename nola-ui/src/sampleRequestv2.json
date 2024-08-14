@@ -1,0 +1,11 @@
+{
+  "src_spreadsheets": {
+    "0": {
+      "spreadsheet_id": "1IBaJugViSUO36_rNCKfOV1V5D-9YPSoD-vp6CN8GfY8",
+      "sheet_name": "Product1",
+      "columns": ["Thời gian", "Rate", "Người bán", "Đơn giá", "Trạng thái"]
+    }
+  },
+  "des_spreadsheet_id": "",
+  "des_sheet_name": []
+}

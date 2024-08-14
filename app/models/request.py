@@ -39,7 +39,7 @@ class AccMultiFilterRequestV2(BaseModel):
 
 class Spreadsheet(BaseModel):
     spreadsheet_id: str
-    sheet_name: List[str]
+    sheet_name: str
     columns: List[str]
 
 class AccMultiSpreadsheetFilterRequest(BaseModel):

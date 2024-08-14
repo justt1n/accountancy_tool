@@ -2,7 +2,7 @@
     "src_spreadsheets": {
         "1": {
             "spreadsheet_id": "1IBaJugViSUO36_rNCKfOV1V5D-9YPSoD-vp6CN8GfY8", 
-            "sheet_name": ["Product1", "Product2"],
+            "sheet_name": "Product1",
             "columns": [
                 "Thời gian",
                 "Rate",
@@ -17,7 +17,22 @@
         },
         "2": {
             "spreadsheet_id": "1yD6ilCVczLZOFWhfQXpWoMXfroeCDqtohgzSEkJm5Uw", 
-            "sheet_name": ["Product3"],
+            "sheet_name": "Product2",
+            "columns": [
+                "Thời gian",
+                "Rate",
+                "Người bán",
+                "Số lượng",
+                "Đơn giá",
+                "Sản phẩm",
+                "Ví trả",
+                "Trạng thái",
+                "Note"
+            ]
+        },
+        "3": {
+            "spreadsheet_id": "1yD6ilCVczLZOFWhfQXpWoMXfroeCDqtohgzSEkJm5Uw", 
+            "sheet_name": "Product3",
             "columns": [
                 "Thời gian",
                 "Rate",

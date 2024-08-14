@@ -27,7 +27,7 @@
     },
     computed: {
       computedClass() {
-        const baseClass = 'btn btn-success w-full';
+        const baseClass = 'btn btn-success w-1/2';
         const variantClass = this.variant ? `btn-${this.variant}` : '';
         const disabledClass = this.disabled ? 'btn-disabled' : '';
         return `${baseClass} ${variantClass} ${disabledClass}`;

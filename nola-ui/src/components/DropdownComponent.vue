@@ -18,24 +18,30 @@
                   <ul>
                     <li v-if="loading">Loading...</li>
                     <li v-else v-for="(header, index) in headers" :key="index">
-                    <label class="cursor-pointer label flex items-center">
-                      <span class="label-text">{{ header }}</span>
-                      <input
-                        class="checkbox checkbox-success mr-2"
-                        type="checkbox"
-                        :id="`header-${index}`"
-                        :value="header"
-                        v-model="selectedHeaders"
-                        @change="onCheckboxChange"
-                      />
-                    </label>
-                  </li>
+                      <label class="cursor-pointer label flex items-center">
+                        <span class="label-text">{{ header }}</span>
+                        <input
+                          class="checkbox checkbox-success mr-2"
+                          type="checkbox"
+                          :id="`header-${index}`"
+                          :value="header"
+                          v-model="selectedHeaders"
+                          @change="onCheckboxChange"
+                        />
+                      </label>
+                    </li>
                   </ul>
                 </div>
               </div>
             </div>
           </div>
           <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+            <button type="button" class="btn m-1" @click="submitModal">
+              Submit
+            </button>
+            <button type="button" class="btn m-1" @click="resetModal">
+              Reset
+            </button>
             <button type="button" class="btn m-1" @click="showModal = false">
               Close
             </button>
@@ -47,13 +53,13 @@
 </template>
 
 <script>
-import axios from "axios";
+import axios from 'axios';
 
 export default {
-  name: "ModalComponent",
+  name: "DropdownComponent",
   props: {
     sheetName: String,
-    spreadsheetId: String, // Add this line
+    spreadsheetId: String,
   },
   data() {
     return {
@@ -66,14 +72,25 @@ export default {
   },
   methods: {
     toggleModal() {
-  // Toggle the modal visibility
       this.showModal = !this.showModal;
-      console.log('showModal:', this.showModal); // Add this line
+      console.log("showModal:", this.showModal);
 
-      // Fetch headers if the modal is shown and headers are not yet loaded
       if (this.showModal && !this.loaded) {
-        console.log("Fetching headers...");
-        this.fetchHeaders();
+        const items = JSON.parse(localStorage.getItem('items')) || [];
+        const existingItem = items.find(item => 
+          item.spreadsheet_id === this.spreadsheetId && 
+          item.sheet_name === this.sheetName
+        );
+
+        if (existingItem) {
+          this.headers = existingItem.columns;
+          this.selectedHeaders = existingItem.columns;
+          this.loaded = true;
+          console.log("Loaded headers from localStorage:", this.headers);
+        } else {
+          console.log("Fetching headers...");
+          this.fetchHeaders();
+        }
       }
     },
     async fetchHeaders() {
@@ -83,7 +100,7 @@ export default {
           "http://127.0.0.1:8000/api/v2/headers",
           {
             src_sheet_url: this.spreadsheetId,
-            src_sheet_name: this.sheetName, // Use the prop here
+            src_sheet_name: this.sheetName,
           }
         );
         this.headers = response.data.data;
@@ -98,13 +115,42 @@ export default {
     onCheckboxChange() {
       this.$emit("update:selectedHeaders", this.selectedHeaders);
     },
-  },
+    submitModal() {
+      const newItem = {
+        spreadsheet_id: this.spreadsheetId,
+        sheet_name: this.sheetName,
+        columns: this.selectedHeaders,
+      };
+      console.log("Saving item:", newItem);
+      let items = JSON.parse(localStorage.getItem("FilterRequests")) || [];
+
+      const isDuplicate = items.some(
+        (item) =>
+          item.spreadsheet_id === newItem.spreadsheet_id &&
+          item.sheet_name === newItem.sheet_name
+      );
+
+      if (!isDuplicate) {
+        items.push(newItem);
+        localStorage.setItem("FilterRequests", JSON.stringify(items));
+        console.log("Item saved to localStorage:", newItem);
+      } else {
+        console.log("Duplicate item found, not saving:", newItem);
+      }
+
+      this.showModal = false;
+    },
+    resetModal() {
+      //remove that item from localStorage with that spreadsheet_id and sheet_name
+      let items = JSON.parse(localStorage.getItem("FilterRequests")) || [];
+      items = items.filter(
+        (item) =>
+          item.spreadsheet_id !== this.spreadsheetId ||
+          item.sheet_name !== this.sheetName
+      );
+      localStorage.setItem("FilterRequests", JSON.stringify(items));
+      this.fetchHeaders();
+    },
+  }
 };
 </script>
-
-<style scoped>
-.checkbox-container {
-  display: flex;
-  align-items: center;
-}
-</style>

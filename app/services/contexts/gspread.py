@@ -164,73 +164,72 @@ class GSpreadContext:
     def filter_and_transfer_data3(self, src_spreadsheets, des_spreadsheet_id, des_sheet_name):
         des_spreadsheet = self.gc.open_by_key(des_spreadsheet_id)
         des_sheet = des_spreadsheet.worksheet(des_sheet_name)
-
+        des_sheet.clear()
         col_offset = 0  # Column offset between data ranges
 
-        for product_spreadsheet_id, spreadsheet_info in src_spreadsheets.items():
+        for index, spreadsheet_info in src_spreadsheets.items():
             product_spreadsheet = self.gc.open_by_key(spreadsheet_info.spreadsheet_id)
 
-            for sheet_name in spreadsheet_info.sheet_name:
-                product_sheet = product_spreadsheet.worksheet(sheet_name)
-                values = product_sheet.get_all_values()
-                values = [row for row in values if any(cell.strip() for cell in row)]
-                if not values:
-                    continue
+            product_sheet = product_spreadsheet.worksheet(spreadsheet_info.sheet_name)
+            values = product_sheet.get_all_values()
+            values = [row for row in values if any(cell.strip() for cell in row)]
+            if not values:
+                continue
 
-                # Detect the starting row and column using detect_ranges
-                detected_ranges = self.detect_ranges(spreadsheet_info.spreadsheet_id, product_sheet.id)
-                if not detected_ranges:
-                    continue
+            # Detect the starting row and column using detect_ranges
+            detected_ranges = self.detect_ranges(spreadsheet_info.spreadsheet_id, product_sheet.id)
+            if not detected_ranges:
+                continue
 
-                # Get the starting cell of the first (and only) range
-                start_cell, end_cell = detected_ranges[0].split(":")
-                start_cell = start_cell.split("!")[1]
-                start_row, start_col = gspread.utils.a1_to_rowcol(start_cell)
+            # Get the starting cell of the first (and only) range
+            start_cell, end_cell = detected_ranges[0].split(":")
+            start_cell = start_cell.split("!")[1]
+            start_row, start_col = gspread.utils.a1_to_rowcol(start_cell)
 
-                # Extract header row from the detected start_row
-                header_row = values[0]
+            # Extract header row from the detected start_row
+            header_row = values[0]
 
-                try:
-                    # Ensure all columns exist in the header row
-                    col_indices = [header_row.index(col_name) for col_name in spreadsheet_info.columns]
-                except ValueError as e:
-                    raise ValueError(f"Column '{e.args[0]}' not found in the header row of sheet '{sheet_name}'")
+            try:
+                # Ensure all columns exist in the header row
+                col_indices = [header_row.index(col_name) for col_name in spreadsheet_info.columns]
+            except ValueError as e:
+                raise ValueError(f"Column '{e.args[0]}' not found in the header row of sheet '{spreadsheet_info.sheet_name}'")
 
-                # Create the new header row for the filtered values
-                new_header_row = [header_row[idx] for idx in col_indices] + ["Identifier"]
-                status_col_index = header_row.index("Trạng thái")
+            # Create the new header row for the filtered values
+            new_header_row = [header_row[idx] for idx in col_indices] + ["Identifier"]
+            status_col_index = header_row.index("Trạng thái")
 
-                filtered_values = [new_header_row]  # Insert header at the beginning
-                for row_idx, row in enumerate(values[1:], start=start_row):
-                    row = [item.strip().lower() for item in row]
-                    if 'unpaid' in row:
-                        filtered_row = [row[idx] for idx in col_indices]
-                        # Calculate begin_col and end_col based on the current col_offset
-                        begin_col = gspread.utils.rowcol_to_a1(1, col_offset + 2)
-                        end_col = gspread.utils.rowcol_to_a1(1, col_offset + 1 + len(spreadsheet_info.columns) + 1)
-                        # Add identifier information into a cell separated by "#"
-                        identifier = f"{spreadsheet_info.spreadsheet_id}#{sheet_name}#{begin_col}:{end_col}#{self.indices_to_cell((row_idx, status_col_index))}"
-                        filtered_row.append(identifier)
-                        filtered_values.append(filtered_row)
+            filtered_values = [new_header_row]  # Insert header at the beginning
+            for row_idx, row in enumerate(values[1:], start=start_row):
+                row = [item.strip().lower() for item in row]
+                if 'unpaid' in row:
+                    filtered_row = [row[idx] for idx in col_indices]
+                    # Calculate begin_col and end_col based on the current col_offset
+                    begin_col = gspread.utils.rowcol_to_a1(1, col_offset + 2)
+                    end_col = gspread.utils.rowcol_to_a1(1, col_offset + 1 + len(spreadsheet_info.columns) + 1)
+                    # Add identifier information into a cell separated by "#"
+                    identifier = f"{spreadsheet_info.spreadsheet_id}#{spreadsheet_info.sheet_name}#{begin_col}:{end_col}#{self.indices_to_cell((row_idx, status_col_index))}"
+                    filtered_row.append(identifier)
+                    filtered_values.append(filtered_row)
 
-                if filtered_values:
-                    start_col_offset = col_offset + 2  # Adjusted offset to 2
-                    end_col = start_col_offset + len(spreadsheet_info.columns) + 1  # +1 for the identifier information
-                    if end_col > des_sheet.col_count:
-                        raise ValueError(
-                            f"End column {end_col} exceeds the sheet's column count {des_sheet.col_count}")
+            if filtered_values:
+                start_col_offset = col_offset + 2  # Adjusted offset to 2
+                end_col = start_col_offset + len(spreadsheet_info.columns) + 1  # +1 for the identifier information
+                if end_col > des_sheet.col_count:
+                    raise ValueError(
+                        f"End column {end_col} exceeds the sheet's column count {des_sheet.col_count}")
 
-                    start_cell = gspread.utils.rowcol_to_a1(1, start_col_offset)
-                    end_cell = gspread.utils.rowcol_to_a1(len(filtered_values), end_col)
-                    cell_range = f"{start_cell}:{end_cell}"
+                start_cell = gspread.utils.rowcol_to_a1(1, start_col_offset)
+                end_cell = gspread.utils.rowcol_to_a1(len(filtered_values), end_col)
+                cell_range = f"{start_cell}:{end_cell}"
 
-                    des_sheet.update(cell_range, filtered_values)
-                    col_offset += len(spreadsheet_info.columns) + 1 + 2  # Horizontal spacing between datasets
+                des_sheet.update(cell_range, filtered_values)
+                col_offset += len(spreadsheet_info.columns) + 1 + 2  # Horizontal spacing between datasets
 
-                    # Set the identifier column to wrap text to clip
-                    identifier_col = start_col_offset + len(spreadsheet_info.columns)
-                    identifier_range = f"{gspread.utils.rowcol_to_a1(1, identifier_col)}:{gspread.utils.rowcol_to_a1(len(filtered_values), identifier_col)}"
-                    des_sheet.format(identifier_range, {"wrapStrategy": "CLIP"})
+                # Set the identifier column to wrap text to clip
+                identifier_col = start_col_offset + len(spreadsheet_info.columns)
+                identifier_range = f"{gspread.utils.rowcol_to_a1(1, identifier_col)}:{gspread.utils.rowcol_to_a1(len(filtered_values), identifier_col)}"
+                des_sheet.format(identifier_range, {"wrapStrategy": "CLIP"})
 
 
     def filter_and_transfer_data2(self, product_spreadsheets, payment_spreadsheet_id, payment_sheet_name, columns):

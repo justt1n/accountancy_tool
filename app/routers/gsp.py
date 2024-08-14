@@ -60,3 +60,12 @@ def get_headers(request: GetHeaderRequest):
     return {"status": "OK", "data": data}
 
 
+@router.post("/filter")
+def filter(request: AccMultiSpreadsheetFilterRequest):
+    ctx_manager = get_context_manager()
+    gsp_context = ctx_manager.get_context("gspread")
+    gsp_context.filter_and_transfer_data3(request.src_spreadsheets, request.des_spreadsheet_id,
+                                          request.des_sheet_name)
+    return {"status": "OK", "request count": gsp_context.get_request_count()}
+
+
