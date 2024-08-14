@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from app.constants import CONTEXTS
 from app.models.request import GetSheetNameRequest, \
-    AccMultiFilterRequestV2, GetHeaderRequest
+    AccMultiFilterRequestV2, GetHeaderRequest, AccMultiSpreadsheetFilterRequest
 from app.services.context_manager import ContextManager
 
 router = APIRouter()
@@ -43,6 +43,14 @@ def test2(request: AccMultiFilterRequestV2):
                                           request_data.des_sheet_name, request_data.columns)
     return {"status": "OK", "request count": gsp_context.get_request_count()}
 
+@router.post("/test3")
+def test3(request: AccMultiSpreadsheetFilterRequest):
+    ctx_manager = get_context_manager()
+    gsp_context = ctx_manager.get_context("gspread")
+    gsp_context.filter_and_transfer_data3(request.src_spreadsheets, request.des_spreadsheet_id,
+                                          request.des_sheet_name)
+    return {"status": "OK", "request count": gsp_context.get_request_count()}
+
 
 @router.post("/headers")
 def get_headers(request: GetHeaderRequest):
@@ -50,3 +58,5 @@ def get_headers(request: GetHeaderRequest):
     gsp_context = ctx_manager.get_context("gspread")
     data = gsp_context.get_header(request.src_sheet_url, request.src_sheet_name)
     return {"status": "OK", "data": data}
+
+

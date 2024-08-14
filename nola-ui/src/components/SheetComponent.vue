@@ -1,5 +1,5 @@
 <template>
-  <div class="sheet w-1/2">
+  <div class="sheet">
     <div>
       <label
         :for="sheetId"
@@ -18,7 +18,6 @@
     </div>
     <div class="form-control">
       <h2 class="text-xl font-bold dark:text-white p-2">
-        {{ sheetLabel }} Data
       </h2>
       <label
         v-for="(item, index) in sheetData"
@@ -33,10 +32,17 @@
           :value="item"
           class="checkbox checkbox-success"
         />
+        <div v-if="selectedHeaders.length">
+          <h3 class="text-lg font-bold">Selected Headers</h3>
+          <ul>
+            <li v-for="(header, index) in selectedHeaders" :key="index">
+              {{ header }}
+            </li>
+          </ul>
+        </div>
       </label>
     </div>
     <div v-if="sheetNames.length">
-      <h3 class="text-lg font-bold">Sheet Names</h3>
       <ul>
         <li v-for="(sheet, index) in sheetNames" :key="index">
           <DropdownComponent

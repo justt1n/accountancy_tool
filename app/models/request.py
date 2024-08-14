@@ -35,3 +35,14 @@ class AccMultiFilterRequestV2(BaseModel):
     des_spreadsheet_id: str
     des_sheet_name: str
     columns: List[str]
+
+
+class Spreadsheet(BaseModel):
+    spreadsheet_id: str
+    sheet_name: List[str]
+    columns: List[str]
+
+class AccMultiSpreadsheetFilterRequest(BaseModel):
+    src_spreadsheets: Dict[str, Spreadsheet]
+    des_spreadsheet_id: str
+    des_sheet_name: str
