@@ -68,11 +68,4 @@ def filter(request: AccMultiSpreadsheetFilterRequest):
                                           request.des_sheet_name)
     return {"status": "OK", "request count": gsp_context.get_request_count()}
 
-@router.post("/addScript")
-def add_script():
-    ctx_manager = get_context_manager()
-    gsp_context = ctx_manager.get_context("gspread")
-    data = gsp_context.clone_spreadsheet("1Mz_fwMlT6cS7sNBkoE1AUaGhjLE9f3XYhoAzy9X9dro")
-    return {"status": "OK", "data": data}
-
 

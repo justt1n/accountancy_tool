@@ -32,7 +32,6 @@ class GSpreadContext:
         self.google_context = ctx_manager.get_context("google")
         self.gc = gspread.authorize(self.google_context.scoped_creds)
         self.drive_service = build('drive', 'v3', credentials=self.google_context.scoped_creds)
-        self.script_service = build('script', 'v1', credentials=self.google_context.client_creds)
 
     @staticmethod
     def indices_to_cell(indices):
@@ -55,119 +54,6 @@ class GSpreadContext:
         spreadsheet = self.gc.create(title)
         spreadsheet.share(email, perm_type='user', role='writer')
         return spreadsheet.id
-
-    def add_apps_script2(self, spreadsheet_id):
-        try:
-            # Step 1: Get the content of the existing Apps Script project
-            original_script_id = '1NOkmTIVu99Gn62nk6VzHZxn9yjMI5nTMnUUaYi2c7vLG5ibkZyUVCubL'
-            original_script_content = self.script_service.projects().getContent(
-                scriptId=original_script_id
-            ).execute()
-
-            # Step 2: Create a new Apps Script project
-
-            create_project_response = self.script_service.projects().create(
-                title = 'Cloned Script for Spreadsheet',
-                parentId = spreadsheet_id
-            ).execute()
-            new_script_id = create_project_response['scriptId']
-
-            # Step 3: Update the new project with the content from the original project
-            update_request = {
-                'files': original_script_content['files']  # Copy all files from the original script
-            }
-            self.script_service.projects().updateContent(
-                scriptId=new_script_id,
-                body=update_request
-            ).execute()
-
-            # Step 4: Deploy the new Apps Script project and attach it to the new spreadsheet
-            deployment_request = {
-                'versionNumber': 1,
-                'manifestFileName': 'appsscript',
-                'description': 'Deployment of cloned script',
-            }
-            self.script_service.projects().deployments().create(
-                scriptId=new_script_id,
-                body=deployment_request
-            ).execute()
-
-            return new_script_id
-
-        except HttpError as e:
-            print(f"Failed to clone and deploy Apps Script project: {e}")
-            raise
-
-    def add_apps_script(self, original_script_id):
-        try:
-            # Step 1: Get the content of the existing Apps Script project
-            original_script_content = self.script_service.projects().getContent(
-                scriptId=original_script_id
-            ).execute()
-
-            # Step 2: Create a new spreadsheet
-            new_spreadsheet = self.gc.create('New Spreadsheet')
-            new_spreadsheet_id = new_spreadsheet.id
-
-            # Step 3: Create a new Apps Script project
-            create_project_request = {
-                'parentId': '1Ax7KII2IpOtxLzDWMtPSg2R86jj0iai-DrtHG5vVJtU',
-                'title': 'Cloned Script for New Spreadsheet',
-            }
-            create_project_response = self.script_service.projects().create(
-                body=create_project_request
-            ).execute()
-            new_script_id = create_project_response['scriptId']
-
-            # Step 4: Update the new project with the content from the original project
-            update_request = {
-                'files': original_script_content['files']  # Reuse all files from the original script
-            }
-            self.script_service.projects().updateContent(
-                scriptId=new_script_id,
-                body=update_request
-            ).execute()
-
-            # Step 5: Deploy the new Apps Script project and attach it to the new spreadsheet
-            deployment_request = {
-                'versionNumber': 1,
-                'manifestFileName': 'appsscript',
-                'description': 'Deployment of cloned script',
-            }
-            self.script_service.projects().deployments().create(
-                scriptId=new_script_id,
-                body=deployment_request
-            ).execute()
-
-            return new_script_id, new_spreadsheet_id
-
-        except HttpError as e:
-            print(f"Failed to clone and deploy Apps Script project: {e}")
-            raise
-
-    def clone_spreadsheet(self, original_spreadsheet_id):
-        try:
-            # Open the original spreadsheet
-            original_spreadsheet = self.gc.open_by_key(original_spreadsheet_id)
-            original_title = original_spreadsheet.title
-
-            # Create a new spreadsheet with the same title
-            new_spreadsheet = self.gc.copy(original_spreadsheet_id, title=original_title, copy_permissions=True)
-            new_spreadsheet_id = new_spreadsheet.id
-
-            return new_spreadsheet_id
-        except HttpError as e:
-            print(f"Failed to clone spreadsheet: {e}")
-            raise
-
-    def setup(self, title, email, script_content, is_payment=False):
-        spreadsheet_id = self.create_spreadsheet(title, email)
-        script_id = self.add_apps_script(spreadsheet_id, script_content)
-        with open('storage/onEnterCell.txt', 'r') as file:
-            on_enter_cell = file.read()
-        if is_payment:
-            self.add_apps_script(spreadsheet_id, on_enter_cell)
-        return spreadsheet_id, script_id
 
     # CORE
     def detect_ranges(self, spreadsheet_id, sheet_id):
