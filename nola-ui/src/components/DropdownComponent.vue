@@ -1,13 +1,15 @@
 <template>
   <div class="relative">
-    <button class="btn m-1" @click="toggleModal">
+    <button class="btn m-1" :class="{ 'btn-success' : isSaved }" @click="toggleModal">
       {{ sheetName }}
     </button>
-    <div v-if="showModal" class="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div v-if="showModal" class="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog"
+      aria-modal="true">
       <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        <div
+          class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div class="sm:flex sm:items-start">
               <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
@@ -20,14 +22,8 @@
                     <li v-else v-for="(header, index) in headers" :key="index">
                       <label class="cursor-pointer label flex items-center">
                         <span class="label-text">{{ header }}</span>
-                        <input
-                          class="checkbox checkbox-success mr-2"
-                          type="checkbox"
-                          :id="`header-${index}`"
-                          :value="header"
-                          v-model="selectedHeaders"
-                          @change="onCheckboxChange"
-                        />
+                        <input class="checkbox checkbox-success mr-2" type="checkbox" :id="`header-${index}`"
+                          :value="header" v-model="selectedHeaders" @change="onCheckboxChange" />
                       </label>
                     </li>
                   </ul>
@@ -61,6 +57,11 @@ export default {
     sheetName: String,
     spreadsheetId: String,
   },
+  computed: {
+    hasLocalStorageValue() {
+      return localStorage.getItem('yourKey') !== null;
+    },
+  },
   data() {
     return {
       showModal: false,
@@ -68,6 +69,7 @@ export default {
       selectedHeaders: [],
       loading: false,
       loaded: false,
+      isSaved: false,
     };
   },
   methods: {
@@ -77,8 +79,8 @@ export default {
 
       if (this.showModal && !this.loaded) {
         const items = JSON.parse(localStorage.getItem('items')) || [];
-        const existingItem = items.find(item => 
-          item.spreadsheet_id === this.spreadsheetId && 
+        const existingItem = items.find(item =>
+          item.spreadsheet_id === this.spreadsheetId &&
           item.sheet_name === this.sheetName
         );
 
@@ -137,7 +139,9 @@ export default {
       } else {
         console.log("Duplicate item found, not saving:", newItem);
       }
-
+      this.isSaved = true;
+      //add class to the button to show that it has been saved
+      
       this.showModal = false;
     },
     resetModal() {
@@ -149,6 +153,7 @@ export default {
           item.sheet_name !== this.sheetName
       );
       localStorage.setItem("FilterRequests", JSON.stringify(items));
+      this.isSaved = false;
       this.fetchHeaders();
     },
   }

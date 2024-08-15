@@ -2,18 +2,8 @@
   <div id="app">
     <TitleComponent />
     <div class="flex">
-      <div class="w-1/2 border">
-        <label class="cursor-pointer label">
-          <span class="label-text w-1/2">Number of product sheet</span>
-          <input
-            type="number"
-            class="input w-1/2 border"
-            v-model="srcSheetUrlNum"
-            placeholder="Enter sheet URLs separated by ';'"
-          />
-        </label>
-      </div>
-      <div class="w-1/2 flex items-center space-x-4 p-2">
+
+      <div class="flex items-center space-x-4 p-2">
         <div class="flex">
           <LocalStoTextBox />
         </div>
@@ -25,28 +15,29 @@
     <div class="bg-base-200 w-1/2"></div>
     <div class="flex">
       <div class="w-1/2 mockup-window bg-gray-100 border">
+        <div class="w-full border">
+          <label class="cursor-pointer label">
+            <span class="label-text w-1/2">Number of product sheet</span>
+            <input type="number" class="input w-1/2 border" v-model="srcSheetUrlNum"
+              placeholder="Enter sheet URLs separated by ';'" />
+          </label>
+        </div>
         <div class="bg-gray-100 justify-center px-4 py-16">
           <div v-for="(url, i) in srcSheetUrlArray" :key="i">
-            <SheetComponent
-              :sheetId="'srcSheet' + i"
-              :sheetLabel="'Product ' + i"
-              :sheetData="srcSheetData[i]"
-              :badgeText="'Source'"
-              @update:sheet="updateSrcSheet(i)"
-              @update:selectedData="updateSelectedSrcData(i)"
-            />
+            <SheetComponent :sheetId="'srcSheet' + i" :sheetLabel="'Product ' + i" :sheetData="srcSheetData[i]"
+              :badgeText="'Source'" @update:sheet="updateSrcSheet(i)" @update:selectedData="updateSelectedSrcData(i)" />
           </div>
         </div>
       </div>
       <div class="w-1/2 mockup-window bg-gray-100 border">
+        <div class="ml-3 mt-3">
+          <ButtonComponent type="submit" variant="primary" @click="openTemplate">
+            Open Template Payment
+          </ButtonComponent>
+        </div>
         <div class="bg-gray-100 justify-center px-4 py-16">
-          <DesSheetComponent
-            :sheetId="'destSheet'"
-            :sheetLabel="'Destination Sheet'"
-            :sheetData="destSheetData"
-            @spreadsheet-selected="updateDestSheetId"
-            @sheet-selected="updateSelectedSheet"
-          />
+          <DesSheetComponent :sheetId="'destSheet'" :sheetLabel="'Payment'" :sheetData="destSheetData"
+            @spreadsheet-selected="updateDestSheetId" @sheet-selected="updateSelectedSheet" />
         </div>
       </div>
     </div>
@@ -153,6 +144,9 @@ export default {
         des_sheet_name: this.selectedSheet,
       };
       return requestPayload;
+    },
+    openTemplate() {
+      window.open("https://docs.google.com/spreadsheets/d/1jiV9BIOuOAlgQObuxRrxonvKThSFfttd77OWQyle3rE/edit?gid=0#gid=0");
     },
   },
 };

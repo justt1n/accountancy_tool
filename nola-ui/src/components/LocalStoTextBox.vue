@@ -1,6 +1,6 @@
 <template>
     <div class="w-full">
-      <button @click="openModal" class="btn btn-primary w-1/2">Show Stored Data</button>
+      <button @click="openModal" class="btn btn-primary">Show Stored Data</button>
   
       <div v-if="isModalOpen" class="modal modal-open">
         <div class="modal-box w-full max-w-full">

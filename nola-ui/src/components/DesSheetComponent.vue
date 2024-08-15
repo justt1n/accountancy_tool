@@ -64,7 +64,7 @@ export default {
   props: {
     sheetId: String,
     sheetLabel: String,
-    sheetData: Array,
+    sheetData: String,
     badgeText: String,
   },
   data() {
