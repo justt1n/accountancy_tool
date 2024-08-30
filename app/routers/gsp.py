@@ -59,6 +59,14 @@ def get_headers(request: GetHeaderRequest):
     data = gsp_context.get_header(request.src_sheet_url, request.src_sheet_name)
     return {"status": "OK", "data": data}
 
+@router.post("/headers2")
+def get_headers(request: GetHeaderRequest):
+    ctx_manager = get_context_manager()
+    gsp_context = ctx_manager.get_context("gspread")
+    data = gsp_context.get_header(request.src_sheet_url, request.src_sheet_name)
+    return {"status": "OK", "data": data}
+
+
 
 @router.post("/filter")
 def filter(request: AccMultiSpreadsheetFilterRequest):
